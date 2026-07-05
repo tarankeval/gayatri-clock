@@ -1050,6 +1050,154 @@ export function playTestChime(): void {
   playGayatriChime();
 }
 
+// ─── Share / Export ────────────────────────────────────────────────────
+
+/**
+ * Generate a shareable text summary of today's Gayatri and Brahma Muhurta times.
+ */
+export function generateShareText(
+  times: GayatriTimes,
+  locationName: string,
+  panchang: Panchang | null,
+): string {
+  const lines: string[] = [];
+  lines.push("🕉 Gayatri Time — Today");
+  lines.push("");
+  lines.push(`📍 ${locationName}`);
+  lines.push(`📅 ${times.now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`);
+  lines.push("");
+  lines.push(`🌅 Sunrise: ${formatTime(times.sunrise)}`);
+  lines.push(`🌇 Sunset: ${formatTime(times.sunset)}`);
+  lines.push("");
+  lines.push(`🕉 Brahma Muhurta: ${formatTime(times.brahmaMuhurtaStart)} — ${formatTime(times.brahmaMuhurtaEnd)}`);
+  lines.push(`☀ Gayatri Muhurta: ${formatTime(times.gayatriMuhurtaStart)} — ${formatTime(times.gayatriMuhurtaEnd)}`);
+  lines.push(`⏱ Muhurta length: ${times.muhurtaLengthMinutes.toFixed(1)} min`);
+  lines.push("");
+  if (panchang) {
+    lines.push(`📖 Panchang:`);
+    lines.push(`  Tithi: ${panchang.tithi.name} (${panchang.tithi.paksha}, Day ${panchang.tithi.day})`);
+    lines.push(`  Nakshatra: ${panchang.nakshatra.name} — ${panchang.nakshatra.deity}`);
+    lines.push(`  Yoga: ${panchang.yoga.name}`);
+    lines.push(`  ${panchang.samvatYear} · ${panchang.hinduMonth}`);
+    lines.push("");
+  }
+  lines.push("Made with Gayatri Time — Notebook Edition");
+
+  return lines.join("\n");
+}
+
+/**
+ * Generate an .ics calendar file content for the upcoming Gayatri times.
+ * Can be downloaded and imported into Google Calendar, Apple Calendar, etc.
+ */
+export function generateCalendarICS(schedule: DaySchedule[], locationName: string): string {
+  const lines: string[] = [];
+  lines.push("BEGIN:VCALENDAR");
+  lines.push("VERSION:2.0");
+  lines.push("PRODID:-//Gayatri Time//Notebook Edition//EN");
+  lines.push("CALSCALE:GREGORIAN");
+  lines.push("METHOD:PUBLISH");
+  lines.push("X-WR-CALNAME:Gayatri Muhurta");
+  lines.push("X-WR-TIMEZONE:UTC");
+
+  for (const day of schedule) {
+    const uid = `gayatri-${day.date.toISOString().slice(0, 10)}@gayatri-time`;
+    const dtStart = day.gayatriStart.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const dtEnd = day.gayatriEnd.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:${uid}`);
+    lines.push(`DTSTART:${dtStart}`);
+    lines.push(`DTEND:${dtEnd}`);
+    lines.push(`SUMMARY:Gayatri Muhurta — ${day.dateStr}`);
+    lines.push(`DESCRIPTION:Gayatri Muhurta (Savitur Muhurta) — the sacred 30th Muhurta before sunrise.\\nLocation: ${locationName}\\nMuhurta length: ${day.muhurtaLengthMinutes.toFixed(1)} min\\nTithi: ${day.tithi}\\nNakshatra: ${day.nakshatra}`);
+    lines.push(`LOCATION:${locationName}`);
+    lines.push("BEGIN:VALARM");
+    lines.push("TRIGGER:-PT10M");
+    lines.push("ACTION:DISPLAY");
+    lines.push("DESCRIPTION:Gayatri Muhurta begins in 10 minutes");
+    lines.push("END:VALARM");
+    lines.push("END:VEVENT");
+  }
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+/**
+ * Trigger a browser download of a file with the given content.
+ */
+export function downloadFile(content: string, filename: string, mimeType: string): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Share text using the Web Share API (mobile-friendly). Falls back to clipboard.
+ */
+export async function shareOrCopy(text: string, title?: string): Promise<void> {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: title || "Gayatri Time", text });
+      return;
+    } catch {
+      // User cancelled or share failed — fall through to clipboard
+    }
+  }
+  // Fallback: copy to clipboard
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Clipboard unavailable — silently fail
+  }
+}
+
+// ─── Screen Wake Lock ────────────────────────────────────────────
+
+let _wakeLock: WakeLockSentinel | null = null;
+
+/**
+ * Request a screen wake lock to prevent the device from dimming.
+ * Useful during Gayatri time when the user is meditating.
+ */
+export async function requestWakeLock(): Promise<boolean> {
+  if (!("wakeLock" in navigator)) return false;
+  if (_wakeLock) return true; // Already acquired
+  try {
+    _wakeLock = await navigator.wakeLock.request("screen");
+    _wakeLock.addEventListener("release", () => {
+      _wakeLock = null;
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Release the currently held screen wake lock.
+ */
+export function releaseWakeLock(): void {
+  if (_wakeLock) {
+    _wakeLock.release()?.catch(() => {});
+    _wakeLock = null;
+  }
+}
+
+/**
+ * Check if a screen wake lock is currently active.
+ */
+export function hasWakeLock(): boolean {
+  return _wakeLock !== null;
+}
+
 // ─── Time Formatting ───────────────────────────────────────────────────
 
 /**

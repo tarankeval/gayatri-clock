@@ -19,13 +19,25 @@ import {
   AlertTriangle,
   Download,
   Search,
+  Settings,
+  Share2,
+  SunMoon,
+  Info,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import { Switch } from "@/components/ui/switch";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   type GayatriTimes,
@@ -49,6 +61,13 @@ import {
   loadTheme,
   playGayatriChime,
   playTestChime,
+  generateShareText,
+  generateCalendarICS,
+  downloadFile,
+  shareOrCopy,
+  requestWakeLock,
+  releaseWakeLock,
+  hasWakeLock,
 } from "@/lib/gayatri";
 
 // ─── Types ─────────────────────────────────────────────────────────────
@@ -788,6 +807,8 @@ export default function Landing() {
   const deferredPromptRef = useRef<Event | null>(null);
   const [installPromptAvailable, setInstallPromptAvailable] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => loadTheme());
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const wakeLockRef = useRef(false);
 
   // ── Theme management ────────────────────────────────────────────
 
@@ -815,6 +836,10 @@ export default function Landing() {
     sepia: <Sun className="w-3.5 h-3.5" />,
     dark: <Moon className="w-3.5 h-3.5" />,
   };
+
+  // ── Settings Sheet ────────────────────────────────────────────
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ── PWA Install Prompt ─────────────────────────────────────────
 
@@ -1014,6 +1039,36 @@ export default function Landing() {
     }
   }, [times?.isGayatriTime, audioAlarmEnabled]);
 
+  // ── Screen Wake Lock ────────────────────────────────────────────
+  // Keep screen on during Gayatri time so the user can meditate without interruption
+
+  useEffect(() => {
+    if (times?.isGayatriTime && !wakeLockRef.current) {
+      wakeLockRef.current = true;
+      requestWakeLock().then(setWakeLockActive);
+    }
+    if (!times?.isGayatriTime && wakeLockRef.current) {
+      wakeLockRef.current = false;
+      releaseWakeLock();
+      setWakeLockActive(false);
+    }
+  }, [times?.isGayatriTime]);
+
+  // Re-acquire wake lock if it gets released (e.g. after full-screen video)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (
+        !document.hidden &&
+        times?.isGayatriTime &&
+        !hasWakeLock()
+      ) {
+        requestWakeLock().then(setWakeLockActive);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [times?.isGayatriTime]);
+
   // ── Manual refresh ─────────────────────────────────────────────
 
   const handleRefresh = async () => {
@@ -1024,6 +1079,22 @@ export default function Landing() {
       await initLocation();
     }
     setTimeout(() => setIsRefreshing(false), 800);
+  };
+
+  // ── Share / Export ──────────────────────────────────────────────
+
+  const handleShare = async () => {
+    if (!times || !location) return;
+    const text = generateShareText(times, location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`, panchang);
+    await shareOrCopy(text, "Gayatri Time — Today");
+  };
+
+  const handleExportICS = async () => {
+    if (!location) return;
+    // Fetch schedule for 30 days and export as .ics
+    const days = await calcGayatriTimesForRange(location.lat, location.lng, 30);
+    const ics = generateCalendarICS(days, location.name || "My Location");
+    downloadFile(ics, "gayatri-times.ics", "text/calendar;charset=utf-8");
   };
 
   // ── Location change handler ────────────────────────────────────
@@ -1081,7 +1152,7 @@ export default function Landing() {
                   })}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {installPromptAvailable && (
                   <button
                     onClick={handleInstall}
@@ -1093,13 +1164,28 @@ export default function Landing() {
                   </button>
                 )}
                 <button
+                  onClick={handleShare}
+                  className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Share today's times"
+                  disabled={appState !== "ready"}
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
+                <button
                   onClick={cycleTheme}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
-                  title={`Switch to next theme (current: ${themeLabel[theme]})`}
+                  className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+                  title={`Switch theme (${themeLabel[theme]})`}
                 >
                   {themeNextIcon[theme]}
-                  <span className="hidden sm:inline capitalize">{theme}</span>
                 </button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSettingsOpen(true)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </Button>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -1353,6 +1439,207 @@ export default function Landing() {
               </div>
             </motion.div>
           )}
+
+          {/* ── Settings Sheet ── */}
+          <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <SheetContent side="right" className="notebook-paper">
+              <SheetHeader className="notebook-header !pb-3 !mb-0">
+                <SheetTitle className="notebook-title !text-xl flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Settings
+                </SheetTitle>
+              </SheetHeader>
+
+              <div className="flex-1 overflow-y-auto px-4 space-y-5 pb-6 font-[var(--notebook-font)]">
+                {/* ── Theme ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <SunMoon className="w-3.5 h-3.5" />
+                    Theme
+                  </div>
+                  <div className="flex gap-2">
+                    {(["light", "sepia", "dark"] as ThemeMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setTheme(mode)}
+                        className={cn(
+                          "flex-1 py-2 px-3 text-xs rounded-sm border transition-all font-[var(--notebook-font)] capitalize",
+                          theme === mode
+                            ? "border-[oklch(0.65_0.12_50)] bg-[oklch(0.65_0.12_50_/_0.1)] text-[oklch(0.55_0.12_50)] font-semibold"
+                            : "border-border text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {mode === "light" ? <Sun className="w-3 h-3 mx-auto mb-1" /> : mode === "sepia" ? <Sun className="w-3 h-3 mx-auto mb-1" /> : <Moon className="w-3 h-3 mx-auto mb-1" />}
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* ── Notifications ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <Bell className="w-3.5 h-3.5" />
+                    Browser Alert
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-[var(--notebook-font)]">
+                      Notify when Gayatri time starts
+                    </span>
+                    <Switch
+                      checked={notificationsEnabled}
+                      onCheckedChange={toggleNotifications}
+                    />
+                  </div>
+                  <div className="notebook-note mt-1">
+                    Sends a browser notification when Gayatri Muhurta begins.
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* ── Audio Alarm ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <Volume2 className="w-3.5 h-3.5" />
+                    Audio Alarm
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-[var(--notebook-font)]">
+                      Gentle chime on Gayatri time
+                    </span>
+                    <Switch
+                      checked={audioAlarmEnabled}
+                      onCheckedChange={toggleAudioAlarm}
+                    />
+                  </div>
+                  <div className="notebook-note mt-1 mb-2">
+                    Plays a layered chime with OM drone when Gayatri time starts.
+                  </div>
+                  {audioAlarmEnabled && (
+                    <button
+                      onClick={handleTestAlarm}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
+                    >
+                      <Music className="w-3 h-3" />
+                      Test chime
+                    </button>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* ── Screen Wake Lock ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <Sun className="w-3.5 h-3.5" />
+                    Keep Screen On
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-[var(--notebook-font)]">
+                      Prevent screen dimming
+                    </span>
+                    <div className={cn(
+                      "text-xs font-semibold px-2 py-0.5 rounded-full",
+                      wakeLockActive
+                        ? "bg-green-500/10 text-green-600"
+                        : times?.isGayatriTime
+                          ? "bg-yellow-500/10 text-yellow-600"
+                          : "text-muted-foreground"
+                    )}>
+                      {wakeLockActive ? "Active" : times?.isGayatriTime ? "Unavailable" : "Standby"}
+                    </div>
+                  </div>
+                  <div className="notebook-note mt-1">
+                    Automatically keeps your screen awake during Gayatri time.
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* ── Export Calendar ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    Export
+                  </div>
+                  <button
+                    onClick={handleExportICS}
+                    className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)]"
+                  >
+                    <div className="font-medium">Export to Calendar (.ics)</div>
+                    <div className="notebook-note">
+                      Add 30 days of Gayatri times to Google / Apple Calendar
+                    </div>
+                  </button>
+                  {times && location && (
+                    <button
+                      onClick={handleShare}
+                      className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)] mt-2"
+                    >
+                      <div className="font-medium">Share as Text</div>
+                      <div className="notebook-note">
+                        Copy today's times to clipboard or share via system share
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* ── Location Info ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <MapPin className="w-3.5 h-3.5" />
+                    Current Location
+                  </div>
+                  {location && (
+                    <div className="text-sm font-[var(--notebook-font)]">
+                      <div>{location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`}</div>
+                      <div className="notebook-note">
+                        {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleClearSavedLocation}
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors mt-2 font-[var(--notebook-font)]"
+                  >
+                    Clear saved location &amp; re-prompt
+                  </button>
+                </div>
+
+                <Separator />
+
+                {/* ── About ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <Info className="w-3.5 h-3.5" />
+                    About
+                  </div>
+                  <div className="text-sm font-[var(--notebook-font)] leading-relaxed">
+                    <p className="mb-2">
+                      Gayatri Time calculates the exact Muhurta (Vedic time
+                      window) when three sacred conditions align for chanting
+                      the Gayatri Mantra.
+                    </p>
+                    <p className="mb-2">
+                      The app uses the <strong>suncalc</strong> library for
+                      accurate sunrise/sunset and{" "}
+                      <strong>@fusionstrings/panchangam</strong> (Swiss
+                      Ephemeris via Wasm) for Hindu calendar calculations.
+                    </p>
+                    <p className="notebook-note">
+                      Version 1.0 · Notebook Edition · Built with React +
+                      Convex + shadcn/ui
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </div>
