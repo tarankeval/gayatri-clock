@@ -566,6 +566,150 @@ export async function getLocationName(
   }
 }
 
+// ─── Multi-Day Calendar ─────────────────────────────────────────────
+
+/**
+ * A lightweight day summary for the schedule view.
+ */
+export interface DaySchedule {
+  /** The date of this day (midnight local time) */
+  date: Date;
+  /** Formatted weekday name */
+  weekday: string;
+  /** Formatted date string */
+  dateStr: string;
+  /** Whether this day is today */
+  isToday: boolean;
+  /** Gayatri Muhurta start time */
+  gayatriStart: Date;
+  /** Gayatri Muhurta end (sunrise) */
+  gayatriEnd: Date;
+  /** Brahma Muhurta start time */
+  brahmaStart: Date;
+  /** Brahma Muhurta end (same as gayatriStart) */
+  brahmaEnd: Date;
+  /** Sunrise time */
+  sunrise: Date;
+  /** Muhurta length in minutes */
+  muhurtaLengthMinutes: number;
+  /** Tithi name (approximate) */
+  tithi: string;
+  /** Nakshatra name (approximate) */
+  nakshatra: string;
+}
+
+/**
+ * Calculate Gayatri times for a specific date at a given location.
+ *
+ * For a given date D, returns the Gayatri Muhurta ending at D's sunrise
+ * (i.e. the sacred time window on the morning of date D).
+ */
+export function calcGayatriTimesForDate(
+  lat: number,
+  lng: number,
+  date: Date,
+): Omit<GayatriTimes, "now" | "isGayatriTime" | "isBrahmaMuhurta" | "nextEvent" | "nextEventTime" | "msUntilNextEvent"> {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+
+  const sunrise = calcSunrise(lat, lng, dayStart);
+  if (!sunrise) {
+    throw new Error(`No sunrise for ${dayStart.toDateString()}`);
+  }
+
+  // Use yesterday's sunrise as the day start to compute Muhurta length
+  // The Gayatri Muhurta ends at today's sunrise, so the day duration
+  // is from yesterday's sunrise to today's sunrise.
+  const prevDay = new Date(dayStart);
+  prevDay.setDate(prevDay.getDate() - 1);
+  const prevSunrise = calcSunrise(lat, lng, prevDay);
+  if (!prevSunrise) {
+    throw new Error(`No sunrise for ${prevDay.toDateString()}`);
+  }
+
+  const dayDurationMs = sunrise.getTime() - prevSunrise.getTime();
+  const muhurtaLengthMinutes = dayDurationMs / (30 * 60 * 1000);
+
+  // Gayatri Muhurta ends at today's sunrise (the 30th Muhurta)
+  const gayatriStart = new Date(
+    sunrise.getTime() - muhurtaLengthMinutes * 60 * 1000,
+  );
+  const gayatriEnd = sunrise;
+
+  // Brahma Muhurta = 29th + 30th Muhurtas, ending at today's sunrise
+  const brahmaStart = new Date(
+    sunrise.getTime() - 2 * muhurtaLengthMinutes * 60 * 1000,
+  );
+  const brahmaEnd = sunrise;
+
+  // Tomorrow's sunrise (for reference)
+  const nextDay = new Date(dayStart);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const nextSunrise = calcSunrise(lat, lng, nextDay) || new Date(sunrise.getTime() + 86400000);
+
+  // Today's sunset
+  const sunset = calcSunset(lat, lng, dayStart) || new Date(sunrise.getTime() + 43200000);
+
+  return {
+    sunrise,
+    sunset,
+    tomorrowSunrise: nextSunrise,
+    muhurtaLengthMinutes,
+    brahmaMuhurtaStart: brahmaStart,
+    brahmaMuhurtaEnd: brahmaEnd,
+    gayatriMuhurtaStart: gayatriStart,
+    gayatriMuhurtaEnd: gayatriEnd,
+  };
+}
+
+/**
+ * Calculate Gayatri times and Panchang for a range of upcoming days.
+ */
+export function calcGayatriTimesForRange(
+  lat: number,
+  lng: number,
+  numDays: number,
+): DaySchedule[] {
+  const now = new Date();
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const todayMs = today.getTime();
+
+  const days: DaySchedule[] = [];
+
+  for (let i = 0; i < numDays; i++) {
+    const day = new Date(today);
+    day.setDate(day.getDate() + i);
+
+    try {
+      const times = calcGayatriTimesForDate(lat, lng, day);
+      const panch = calcPanchang(day, lat, lng);
+
+      days.push({
+        date: day,
+        weekday: day.toLocaleDateString("en-US", { weekday: "short" }),
+        dateStr: day.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        isToday: day.getTime() === todayMs,
+        gayatriStart: times.gayatriMuhurtaStart,
+        gayatriEnd: times.gayatriMuhurtaEnd,
+        brahmaStart: times.brahmaMuhurtaStart,
+        brahmaEnd: times.brahmaMuhurtaEnd,
+        sunrise: times.sunrise,
+        muhurtaLengthMinutes: times.muhurtaLengthMinutes,
+        tithi: panch.tithi.name,
+        nakshatra: panch.nakshatra.name,
+      });
+    } catch {
+      // Skip days where sunrise can't be calculated (polar regions)
+    }
+  }
+
+  return days;
+}
+
 // ─── Audio Alarm (Web Audio API) ─────────────────────────────────────
 
 let _audioCtx: AudioContext | null = null;

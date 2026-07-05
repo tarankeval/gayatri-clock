@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Clock,
   Calendar,
+  CalendarDays,
   Compass,
   Sparkles,
   AlertTriangle,
@@ -28,7 +29,9 @@ import {
   type GayatriTimes,
   type LocationInfo,
   type Panchang,
+  type DaySchedule,
   calcGayatriTimes,
+  calcGayatriTimesForRange,
   calcPanchang,
   formatCountdown,
   formatTime,
@@ -514,6 +517,157 @@ function LocationPicker({
   );
 }
 
+// ─── Sub-component: Schedule View ────────────────────────────────────
+
+function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
+  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
+  const [viewMode, setViewMode] = useState<7 | 30>(7);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Compute schedule whenever location or view mode changes
+  useEffect(() => {
+    setIsLoading(true);
+    // Use a small delay so rapid toggles batch
+    const timeout = setTimeout(() => {
+      try {
+        const days = calcGayatriTimesForRange(lat, lng, viewMode);
+        setSchedule(days);
+      } catch {
+        setSchedule([]);
+      }
+      setIsLoading(false);
+    }, 50);
+    return () => clearTimeout(timeout);
+  }, [lat, lng, viewMode]);
+
+  return (
+    <div className="notebook-card mt-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-muted-foreground" />
+          <span className="notebook-label">Upcoming Schedule</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setViewMode(7)}
+            className={cn(
+              "px-2.5 py-1 text-xs rounded-sm transition-colors font-[var(--notebook-font)]",
+              viewMode === 7
+                ? "bg-[oklch(0.65_0.12_50_/_0.12)] text-[oklch(0.55_0.12_50)] font-semibold"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            7 Days
+          </button>
+          <button
+            onClick={() => setViewMode(30)}
+            className={cn(
+              "px-2.5 py-1 text-xs rounded-sm transition-colors font-[var(--notebook-font)]",
+              viewMode === 30
+                ? "bg-[oklch(0.65_0.12_50_/_0.12)] text-[oklch(0.55_0.12_50)] font-semibold"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            30 Days
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-6">
+          <div className="notebook-note">Loading schedule...</div>
+        </div>
+      ) : schedule.length === 0 ? (
+        <div className="text-center py-6">
+          <div className="notebook-note">Could not load schedule for this location.</div>
+        </div>
+      ) : (
+        <div className="overflow-x-auto -mx-1">
+          {/* Table header */}
+          <table className="notebook-timetable text-xs min-w-full">
+            <thead>
+              <tr>
+                <th className="py-1.5 px-1 w-20">Date</th>
+                <th className="py-1.5 px-1">Gayatri</th>
+                <th className="py-1.5 px-1 hidden sm:table-cell">Brahma</th>
+                <th className="py-1.5 px-1">Sunrise</th>
+                <th className="py-1.5 px-1 hidden md:table-cell">Tithi</th>
+                <th className="py-1.5 px-1 hidden lg:table-cell">Nakshatra</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedule.map((day, idx) => (
+                <tr
+                  key={idx}
+                  className={cn(
+                    "transition-colors",
+                    day.isToday &&
+                      "bg-[oklch(0.65_0.15_50_/_0.06)]",
+                  )}
+                >
+                  <td className="py-2 px-1">
+                    <div
+                      className={cn(
+                        "flex flex-col leading-tight",
+                        day.isToday && "font-bold",
+                      )}
+                    >
+                      <span>{day.weekday}</span>
+                      <span className="text-muted-foreground">
+                        {day.dateStr}
+                      </span>
+                    </div>
+                    {day.isToday && (
+                      <span className="text-[10px] font-semibold text-[oklch(0.55_0.15_50)]">
+                        TODAY
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 px-1 whitespace-nowrap">
+                    <span
+                      className={cn(
+                        day.isToday &&
+                          "text-[oklch(0.55_0.15_50)] font-semibold",
+                      )}
+                    >
+                      {formatTime(day.gayatriStart)}
+                    </span>
+                    <span className="text-muted-foreground mx-0.5">—</span>
+                    <span className="text-muted-foreground">
+                      {formatTime(day.gayatriEnd)}
+                    </span>
+                  </td>
+                  <td className="py-2 px-1 whitespace-nowrap hidden sm:table-cell">
+                    <span>{formatTime(day.brahmaStart)}</span>
+                    <span className="text-muted-foreground mx-0.5">—</span>
+                    <span className="text-muted-foreground">
+                      {formatTime(day.brahmaEnd)}
+                    </span>
+                  </td>
+                  <td className="py-2 px-1 whitespace-nowrap">
+                    {formatTime(day.sunrise)}
+                  </td>
+                  <td className="py-2 px-1 text-muted-foreground hidden md:table-cell">
+                    {day.tithi}
+                  </td>
+                  <td className="py-2 px-1 text-muted-foreground hidden lg:table-cell">
+                    {day.nakshatra}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="notebook-note mt-2">
+        Based on Muhurta length ≈ {schedule[0]?.muhurtaLengthMinutes.toFixed(1) || "—"} min/day
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ──────────────────────────────────────────────────────────
 
 export default function Landing() {
@@ -946,6 +1100,17 @@ export default function Landing() {
                     </p>
                   </div>
                 </motion.div>
+
+                {/* Schedule View */}
+                {location && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <ScheduleView lat={location.lat} lng={location.lng} />
+                  </motion.div>
+                )}
 
                 {/* Footer */}
                 <div className="notebook-note text-center pt-4 pb-8">
