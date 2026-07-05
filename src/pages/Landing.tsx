@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Sun,
   Moon,
@@ -889,241 +889,236 @@ export default function Landing() {
             </div>
           </motion.div>
 
-          <AnimatePresence mode="wait">
-            {/* ── Loading State ── */}
-            {appState === "loading" && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center py-20"
-              >
-                <div className="w-12 h-12 rounded-full border-2 border-border border-t-[oklch(0.65_0.12_50)] animate-spin mb-4" />
-                <div className="notebook-note">Locating & calculating...</div>
-              </motion.div>
-            )}
+          {/* ── Loading State ── */}
+          {appState === "loading" && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <div className="w-12 h-12 rounded-full border-2 border-border border-t-[oklch(0.65_0.12_50)] animate-spin mb-4" />
+              <div className="notebook-note">Locating & calculating...</div>
+            </motion.div>
+          )}
 
-            {/* ── Location Prompt ── */}
-            {appState === "location-prompt" && (
-              <motion.div
-                key="location-prompt"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="notebook-card mt-4 text-center py-8"
-              >
-                <MapPin className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
-                <h2 className="text-xl font-bold font-[var(--notebook-font)] mb-2">
-                  Where are you?
-                </h2>
-                <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto font-[var(--notebook-font)]">
-                  Gayatri Muhurta is calculated based on your local sunrise
-                  time. Share your location or enter coordinates manually.
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <Button onClick={initLocation} className="font-[var(--notebook-font)]">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    Use My Location
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleUseDefaultLocation}
-                    className="font-[var(--notebook-font)]"
-                  >
-                    <Compass className="w-4 h-4 mr-2" />
-                    Varanasi (Default)
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ── Error State ── */}
-            {appState === "error" && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="notebook-card mt-4 text-center py-8"
-              >
-                <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-destructive" />
-                <h2 className="text-xl font-bold font-[var(--notebook-font)] mb-2">
-                  Calculation Error
-                </h2>
-                <p className="text-sm text-muted-foreground mb-4 font-[var(--notebook-font)]">
-                  {errorMessage}
-                </p>
-                <Button onClick={handleRefresh} className="font-[var(--notebook-font)]">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Try Again
+          {/* ── Location Prompt ── */}
+          {appState === "location-prompt" && (
+            <motion.div
+              key="location-prompt"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="notebook-card mt-4 text-center py-8"
+            >
+              <MapPin className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
+              <h2 className="text-xl font-bold font-[var(--notebook-font)] mb-2">
+                Where are you?
+              </h2>
+              <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto font-[var(--notebook-font)]">
+                Gayatri Muhurta is calculated based on your local sunrise
+                time. Share your location or enter coordinates manually.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button onClick={initLocation} className="font-[var(--notebook-font)]">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Use My Location
                 </Button>
-              </motion.div>
-            )}
+                <Button
+                  variant="outline"
+                  onClick={handleUseDefaultLocation}
+                  className="font-[var(--notebook-font)]"
+                >
+                  <Compass className="w-4 h-4 mr-2" />
+                  Varanasi (Default)
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
-            {/* ── Main Content ── */}
-            {appState === "ready" && times && (
+          {/* ── Error State ── */}
+          {appState === "error" && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="notebook-card mt-4 text-center py-8"
+            >
+              <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-destructive" />
+              <h2 className="text-xl font-bold font-[var(--notebook-font)] mb-2">
+                Calculation Error
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4 font-[var(--notebook-font)]">
+                {errorMessage}
+              </p>
+              <Button onClick={handleRefresh} className="font-[var(--notebook-font)]">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </motion.div>
+          )}
+
+          {/* ── Main Content ── */}
+          {appState === "ready" && times && (
+            <motion.div
+              key="ready"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              {/* Location */}
+              {location && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                  className="notebook-reveal notebook-reveal-delay-1"
+                >
+                  <LocationPicker
+                    location={location}
+                    onLocationChange={handleLocationChange}
+                  />
+                </motion.div>
+              )}
+
+              {/* Current Time */}
               <motion.div
-                key="ready"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="notebook-reveal notebook-reveal-delay-2"
               >
-                {/* Location */}
-                {location && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
-                    className="notebook-reveal notebook-reveal-delay-1"
-                  >
-                    <LocationPicker
-                      location={location}
-                      onLocationChange={handleLocationChange}
-                    />
-                  </motion.div>
-                )}
-
-                {/* Current Time */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="notebook-reveal notebook-reveal-delay-2"
-                >
-                  <div className="notebook-card text-center py-3">
-                    <div className="notebook-label">Current Time</div>
-                    <div className="text-3xl font-bold font-[var(--notebook-font)] tracking-tight mt-1">
-                      {formatTime(times.now)}
-                    </div>
+                <div className="notebook-card text-center py-3">
+                  <div className="notebook-label">Current Time</div>
+                  <div className="text-3xl font-bold font-[var(--notebook-font)] tracking-tight mt-1">
+                    {formatTime(times.now)}
                   </div>
-                </motion.div>
-
-                {/* Countdown */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                  className="notebook-reveal notebook-reveal-delay-3"
-                >                    <CountdownDisplay
-                    times={times}
-                    notificationsEnabled={notificationsEnabled}
-                    audioAlarmEnabled={audioAlarmEnabled}
-                    onToggleNotifications={toggleNotifications}
-                    onToggleAudio={toggleAudioAlarm}
-                    onTestAlarm={handleTestAlarm}
-                  />
-                </motion.div>
-
-                {/* Time Blocks */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="notebook-reveal notebook-reveal-delay-4 space-y-3"
-                >
-                  <div className="notebook-label mb-1 flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5" />
-                    Sacred Time Windows
-                  </div>
-
-                  <TimeBlock
-                    label="Brahma Muhurta"
-                    time={`${formatTime(times.brahmaMuhurtaStart)} — ${formatTime(times.brahmaMuhurtaEnd)}`}
-                    icon={Moon}
-                    active={times.isBrahmaMuhurta && !times.isGayatriTime}
-                    highlight={times.isBrahmaMuhurta}
-                  />
-                  <TimeBlock
-                    label="Gayatri Muhurta (Savitur)"
-                    time={`${formatTime(times.gayatriMuhurtaStart)} — ${formatTime(times.gayatriMuhurtaEnd)}`}
-                    icon={Sun}
-                    active={times.isGayatriTime}
-                    highlight={times.isGayatriTime}
-                  />
-                  <TimeBlock
-                    label="Sunrise"
-                    time={formatTime(times.sunrise)}
-                    icon={Sunrise}
-                  />
-                  <TimeBlock
-                    label="Sunset"
-                    time={formatTime(times.sunset)}
-                    icon={Sunset}
-                  />
-                </motion.div>
-
-                {/* Timeline */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
-                  className="notebook-reveal notebook-reveal-delay-5"
-                >
-                  <TimelineBar times={times} />
-                </motion.div>
-
-                {/* Panchang */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <PanchangCard panchang={panchang} />
-                </motion.div>
-
-                {/* Muhurta detail */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 }}
-                  className="notebook-card"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <Compass className="w-4 h-4 text-muted-foreground" />
-                    <span className="notebook-label">About This Calculation</span>
-                  </div>
-                  <div className="space-y-2 text-sm font-[var(--notebook-font)] leading-relaxed">
-                    <p>
-                      In Vedic timekeeping, one full day (sunrise to next
-                      sunrise) is divided into <span className="notebook-highlight">30 equal Muhurtas</span>.
-                    </p>
-                    <p>
-                      The <strong>30th Muhurta</strong> (Savitur/Gayatri) ends
-                      exactly at sunrise. Its length is{" "}
-                      <strong>{times.muhurtaLengthMinutes.toFixed(1)} minutes</strong>{" "}
-                      today, calculated from the duration between successive
-                      sunrises divided by 30.
-                    </p>
-                    <p>
-                      The <strong>29th Muhurta</strong> (Brahma) precedes Gayatri,
-                      together forming the Brahma Muhurta period — the most
-                      auspicious time for spiritual practice in the Hindu
-                      tradition.
-                    </p>
-                  </div>
-                </motion.div>
-
-                {/* Schedule View */}
-                {location && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <ScheduleView lat={location.lat} lng={location.lng} />
-                  </motion.div>
-                )}
-
-                {/* Footer */}
-                <div className="notebook-note text-center pt-4 pb-8">
-                  Gayatri Time Calculator · Notebook Edition ·{" "}
-                  {new Date().getFullYear()}
                 </div>
               </motion.div>
-            )}
-          </AnimatePresence>
+
+              {/* Countdown */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="notebook-reveal notebook-reveal-delay-3"
+              >
+                <CountdownDisplay
+                  times={times}
+                  notificationsEnabled={notificationsEnabled}
+                  audioAlarmEnabled={audioAlarmEnabled}
+                  onToggleNotifications={toggleNotifications}
+                  onToggleAudio={toggleAudioAlarm}
+                  onTestAlarm={handleTestAlarm}
+                />
+              </motion.div>
+
+              {/* Time Blocks */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="notebook-reveal notebook-reveal-delay-4 space-y-3"
+              >
+                <div className="notebook-label mb-1 flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5" />
+                  Sacred Time Windows
+                </div>
+
+                <TimeBlock
+                  label="Brahma Muhurta"
+                  time={`${formatTime(times.brahmaMuhurtaStart)} — ${formatTime(times.brahmaMuhurtaEnd)}`}
+                  icon={Moon}
+                  active={times.isBrahmaMuhurta && !times.isGayatriTime}
+                  highlight={times.isBrahmaMuhurta}
+                />
+                <TimeBlock
+                  label="Gayatri Muhurta (Savitur)"
+                  time={`${formatTime(times.gayatriMuhurtaStart)} — ${formatTime(times.gayatriMuhurtaEnd)}`}
+                  icon={Sun}
+                  active={times.isGayatriTime}
+                  highlight={times.isGayatriTime}
+                />
+                <TimeBlock
+                  label="Sunrise"
+                  time={formatTime(times.sunrise)}
+                  icon={Sunrise}
+                />
+                <TimeBlock
+                  label="Sunset"
+                  time={formatTime(times.sunset)}
+                  icon={Sunset}
+                />
+              </motion.div>
+
+              {/* Timeline */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="notebook-reveal notebook-reveal-delay-5"
+              >
+                <TimelineBar times={times} />
+              </motion.div>
+
+              {/* Panchang */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <PanchangCard panchang={panchang} />
+              </motion.div>
+
+              {/* Muhurta detail */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="notebook-card"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Compass className="w-4 h-4 text-muted-foreground" />
+                  <span className="notebook-label">About This Calculation</span>
+                </div>
+                <div className="space-y-2 text-sm font-[var(--notebook-font)] leading-relaxed">
+                  <p>
+                    In Vedic timekeeping, one full day (sunrise to next
+                    sunrise) is divided into <span className="notebook-highlight">30 equal Muhurtas</span>.
+                  </p>
+                  <p>
+                    The <strong>30th Muhurta</strong> (Savitur/Gayatri) ends
+                    exactly at sunrise. Its length is{" "}
+                    <strong>{times.muhurtaLengthMinutes.toFixed(1)} minutes</strong>{" "}
+                    today, calculated from the duration between successive
+                    sunrises divided by 30.
+                  </p>
+                  <p>
+                    The <strong>29th Muhurta</strong> (Brahma) precedes Gayatri,
+                    together forming the Brahma Muhurta period — the most
+                    auspicious time for spiritual practice in the Hindu
+                    tradition.
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Schedule View */}
+              {location && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <ScheduleView lat={location.lat} lng={location.lng} />
+                </motion.div>
+              )}
+
+              {/* Footer */}
+              <div className="notebook-note text-center pt-4 pb-8">
+                Gayatri Time Calculator · Notebook Edition ·{" "}
+                {new Date().getFullYear()}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
