@@ -42,74 +42,75 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* CHANGE VALUES FOR THEME */
+/* NOTEBOOK THEME for Gayatri Time App */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+  --background: oklch(0.97 0.008 85);  /* warm cream paper */
+  --foreground: oklch(0.22 0.02 60);    /* warm dark ink */
+  --card: oklch(0.965 0.01 85);          /* slightly lighter paper */
+  --card-foreground: oklch(0.22 0.02 60);
+  --popover: oklch(0.97 0.008 85);
+  --popover-foreground: oklch(0.22 0.02 60);
+  --primary: oklch(0.12 0.03 30);       /* dark ink */
+  --primary-foreground: oklch(0.97 0.008 85);
+  --secondary: oklch(0.92 0.015 85);    /* subtle warm gray */
+  --secondary-foreground: oklch(0.22 0.02 60);
+  --muted: oklch(0.93 0.012 85);
+  --muted-foreground: oklch(0.55 0.02 60);
+  --accent: oklch(0.85 0.04 75);        /* warm accent */
+  --accent-foreground: oklch(0.22 0.02 60);
+  --destructive: oklch(0.6 0.15 25);
+  --border: oklch(0.85 0.02 80);        /* subtle border */
+  --input: oklch(0.88 0.015 80);
+  --ring: oklch(0.7 0.03 60);
+  --chart-1: oklch(0.6 0.12 40);
+  --chart-2: oklch(0.55 0.1 180);
+  --chart-3: oklch(0.5 0.08 260);
+  --chart-4: oklch(0.65 0.1 80);
+  --chart-5: oklch(0.6 0.1 320);
+  --sidebar: oklch(0.965 0.01 85);
+  --sidebar-foreground: oklch(0.22 0.02 60);
+  --sidebar-primary: oklch(0.12 0.03 30);
+  --sidebar-primary-foreground: oklch(0.97 0.008 85);
+  --sidebar-accent: oklch(0.92 0.015 85);
+  --sidebar-accent-foreground: oklch(0.22 0.02 60);
+  --sidebar-border: oklch(0.85 0.02 80);
+  --sidebar-ring: oklch(0.7 0.03 60);
+
+  /* Notebook theme custom properties */
+  --notebook-line-color: oklch(0.85 0.015 85 / 0.45);
+  --notebook-margin-color: oklch(0.7 0.08 30 / 0.35);
+  --notebook-annotation-bg: oklch(0.92 0.05 75 / 0.3);
+  --notebook-highlight: oklch(0.85 0.08 65 / 0.2);
+  --notebook-font: "Georgia", "Palatino Linotype", "Book Antiqua", serif;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.18 0.01 60);    /* dark paper */
+  --foreground: oklch(0.9 0.01 70);     /* light ink */
+  --card: oklch(0.2 0.015 60);
+  --card-foreground: oklch(0.9 0.01 70);
+  --popover: oklch(0.2 0.015 60);
+  --popover-foreground: oklch(0.9 0.01 70);
+  --primary: oklch(0.9 0.01 70);
+  --primary-foreground: oklch(0.18 0.01 60);
+  --secondary: oklch(0.25 0.015 60);
+  --secondary-foreground: oklch(0.9 0.01 70);
+  --muted: oklch(0.25 0.01 60);
+  --muted-foreground: oklch(0.65 0.01 60);
+  --accent: oklch(0.3 0.03 50);
+  --accent-foreground: oklch(0.9 0.01 70);
+  --destructive: oklch(0.6 0.15 25);
+  --border: oklch(0.3 0.01 60);
+  --input: oklch(0.28 0.01 60);
+  --ring: oklch(0.45 0.01 60);
+  --sidebar: oklch(0.2 0.015 60);
+  --sidebar-foreground: oklch(0.9 0.01 70);
+
+  --notebook-line-color: oklch(0.35 0.01 60 / 0.3);
+  --notebook-margin-color: oklch(0.5 0.06 25 / 0.3);
+  --notebook-annotation-bg: oklch(0.35 0.03 50 / 0.25);
+  --notebook-highlight: oklch(0.4 0.05 50 / 0.2);
 }
 
 @layer base {
@@ -118,9 +119,268 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--notebook-font);
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
+}
+
+/* ─── Notebook Paper Background ───────────────────────────────────────── */
+
+.notebook-paper {
+  position: relative;
+  background-color: var(--background);
+  /* Subtle paper grain texture */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Ruled lines background - aligned to a 32px line height */
+.notebook-ruled {
+  position: relative;
+  background-image:
+    /* Red margin line */
+    linear-gradient(
+      90deg,
+      var(--notebook-margin-color) 1px,
+      transparent 1px
+    ),
+    /* Horizontal ruled lines */
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 30px,
+      var(--notebook-line-color) 30px,
+      var(--notebook-line-color) 31px
+    );
+  background-position: 48px 0;
+  background-size: 100% 31px, 100% 31px;
+}
+
+/* Double margin for classic composition notebook */
+.notebook-ruled-double {
+  position: relative;
+  background-image:
+    /* Left margin line */
+    linear-gradient(
+      90deg,
+      var(--notebook-margin-color) 1px,
+      transparent 1px
+    ),
+    /* Second margin line */
+    linear-gradient(
+      90deg,
+      transparent 46px,
+      var(--notebook-margin-color) 46px,
+      var(--notebook-margin-color) 47px,
+      transparent 47px
+    ),
+    /* Horizontal ruled lines */
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 30px,
+      var(--notebook-line-color) 30px,
+      var(--notebook-line-color) 31px
+    );
+  background-position: 48px 0;
+  background-size: 100% 31px, 100% 31px, 100% 31px;
+}
+
+/* ─── Notebook Components ─────────────────────────────────────────────── */
+
+/* Page header with title and date */
+.notebook-header {
+  @apply pb-4 mb-6;
+  border-bottom: 2px solid var(--border);
+  font-family: var(--notebook-font);
+}
+
+.notebook-title {
+  font-family: var(--notebook-font);
+  @apply text-3xl font-bold tracking-tight;
+  letter-spacing: -0.02em;
+}
+
+.notebook-date {
+  font-family: var(--notebook-font);
+  @apply text-sm italic;
+  color: var(--muted-foreground);
+}
+
+/* Annotation / sticky note style */
+.notebook-annotation {
+  background-color: var(--notebook-annotation-bg);
+  @apply rounded-sm px-3 py-1.5 text-sm italic border-l-2;
+  border-left-color: oklch(0.65 0.06 50);
+  font-family: var(--notebook-font);
+}
+
+/* Highlighted text */
+.notebook-highlight {
+  background: linear-gradient(
+    180deg,
+    transparent 60%,
+    var(--notebook-highlight) 60%
+  );
+  @apply px-0.5;
+}
+
+/* Checklist / list item */
+.notebook-list-item {
+  @apply flex items-start gap-3 py-1.5;
+  font-family: var(--notebook-font);
+}
+
+.notebook-list-bullet {
+  @apply w-2 h-2 mt-2 rounded-full flex-shrink-0;
+  background-color: var(--muted-foreground);
+}
+
+/* Data card with notebook feel */
+.notebook-card {
+  background-color: var(--card);
+  @apply rounded-sm border p-4 shadow-sm;
+  border-color: var(--border);
+  font-family: var(--notebook-font);
+}
+
+.notebook-card:hover {
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.06);
+}
+
+/* Label/tag annotation style */
+.notebook-label {
+  font-family: var(--notebook-font);
+  @apply text-xs uppercase tracking-wider font-semibold;
+  color: var(--muted-foreground);
+}
+
+/* Value display (large numbers / times) */
+.notebook-value {
+  font-family: var(--notebook-font);
+  @apply text-2xl font-bold;
+}
+
+/* Small annotation text */
+.notebook-note {
+  font-family: var(--notebook-font);
+  @apply text-xs italic;
+  color: var(--muted-foreground);
+}
+
+/* Timetable / schedule style */
+.notebook-timetable {
+  @apply w-full text-sm;
+  font-family: var(--notebook-font);
+}
+
+.notebook-timetable th {
+  @apply text-left font-semibold pb-2 uppercase tracking-wider text-xs;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.notebook-timetable td {
+  @apply py-2;
+  border-bottom: 1px dashed var(--border);
+}
+
+/* Divider */
+.notebook-divider {
+  @apply my-4;
+  border: none;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border) 0,
+    var(--border) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+/* Corner page curl effect */
+.notebook-curl {
+  position: relative;
+}
+
+.notebook-curl::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    var(--background) 50%
+  );
+  border-bottom-right-radius: 2px;
+}
+
+/* Pinned / marker style */
+.notebook-pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--notebook-font);
+}
+
+/* Sun burst for Gayatri time indicators */
+.gayatri-sun {
+  @apply inline-flex items-center justify-center;
+  color: oklch(0.7 0.12 60);
+}
+
+.gayatri-active {
+  color: oklch(0.65 0.15 50);
+  text-shadow: 0 0 20px oklch(0.65 0.15 50 / 0.3);
+}
+
+/* Fade-in animation for notebook reveal */
+@keyframes notebookReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notebook-reveal {
+  animation: notebookReveal 0.4s ease-out forwards;
+}
+
+.notebook-reveal-delay-1 { animation-delay: 0.1s; }
+.notebook-reveal-delay-2 { animation-delay: 0.2s; }
+.notebook-reveal-delay-3 { animation-delay: 0.3s; }
+.notebook-reveal-delay-4 { animation-delay: 0.4s; }
+.notebook-reveal-delay-5 { animation-delay: 0.5s; }
+
+/* Responsive container */
+.notebook-container {
+  @apply mx-auto w-full;
+  max-width: 720px;
+  @apply px-6 py-8;
+}
+
+/* Divine glow for active Gayatri time */
+@keyframes divineGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px oklch(0.65 0.15 50 / 0.15);
+  }
+  50% {
+    box-shadow: 0 0 25px oklch(0.65 0.15 50 / 0.3);
+  }
+}
+
+.gayatri-glow {
+  animation: divineGlow 3s ease-in-out infinite;
 }
