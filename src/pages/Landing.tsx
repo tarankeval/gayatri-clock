@@ -7,6 +7,9 @@ import {
   MapPin,
   Bell,
   BellOff,
+  Volume2,
+  VolumeX,
+  Music,
   RefreshCw,
   Clock,
   Calendar,
@@ -31,6 +34,8 @@ import {
   formatTime,
   getCurrentLocation,
   getLocationName,
+  playGayatriChime,
+  playTestChime,
 } from "@/lib/gayatri";
 
 // ─── Types ─────────────────────────────────────────────────────────────
@@ -256,11 +261,17 @@ function PanchangCard({ panchang }: { panchang: Panchang | null }) {
 function CountdownDisplay({
   times,
   notificationsEnabled,
+  audioAlarmEnabled,
   onToggleNotifications,
+  onToggleAudio,
+  onTestAlarm,
 }: {
   times: GayatriTimes;
   notificationsEnabled: boolean;
+  audioAlarmEnabled: boolean;
   onToggleNotifications: () => void;
+  onToggleAudio: () => void;
+  onTestAlarm: () => void;
 }) {
   const [display, setDisplay] = useState("");
 
@@ -324,7 +335,7 @@ function CountdownDisplay({
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-dashed border-border">
+      <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-dashed border-border flex-wrap">
         <button
           onClick={onToggleNotifications}
           className={cn(
@@ -340,9 +351,40 @@ function CountdownDisplay({
             <BellOff className="w-4 h-4" />
           )}
           <span className="font-[var(--notebook-font)]">
-            {notificationsEnabled ? "Notifications On" : "Notify me"}
+            {notificationsEnabled ? "Browser Alert" : "Notify me"}
           </span>
         </button>
+
+        <span className="w-px h-4 bg-border" />
+
+        <button
+          onClick={onToggleAudio}
+          className={cn(
+            "flex items-center gap-2 text-sm transition-colors",
+            audioAlarmEnabled
+              ? "text-foreground"
+              : "text-muted-foreground",
+          )}
+        >
+          {audioAlarmEnabled ? (
+            <Volume2 className="w-4 h-4" />
+          ) : (
+            <VolumeX className="w-4 h-4" />
+          )}
+          <span className="font-[var(--notebook-font)]">
+            {audioAlarmEnabled ? "Audio On" : "Sound Off"}
+          </span>
+        </button>
+
+        {audioAlarmEnabled && (
+          <button
+            onClick={onTestAlarm}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Music className="w-3 h-3" />
+            <span className="font-[var(--notebook-font)]">Test</span>
+          </button>
+        )}
 
         <span className="text-muted-foreground text-xs font-[var(--notebook-font)]">
           Next: {times.nextEvent === "gayatri" ? "Gayatri" : times.nextEvent === "brahma" ? "Brahma" : "Sunrise"} at{" "}
@@ -480,9 +522,11 @@ export default function Landing() {
   const [times, setTimes] = useState<GayatriTimes | null>(null);
   const [panchang, setPanchang] = useState<Panchang | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [audioAlarmEnabled, setAudioAlarmEnabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const notificationSentRef = useRef(false);
+  const audioAlarmSentRef = useRef(false);
 
   // ── Initialize location ──────────────────────────────────────────
 
@@ -561,6 +605,15 @@ export default function Landing() {
     }
   };
 
+  const toggleAudioAlarm = () => {
+    setAudioAlarmEnabled((prev) => !prev);
+    audioAlarmSentRef.current = false;
+  };
+
+  const handleTestAlarm = () => {
+    playTestChime();
+  };
+
   // Send notification when Gayatri time starts
   useEffect(() => {
     if (
@@ -580,6 +633,21 @@ export default function Landing() {
       notificationSentRef.current = false;
     }
   }, [times?.isGayatriTime, notificationsEnabled]);
+
+  // Play audio alarm when Gayatri time starts
+  useEffect(() => {
+    if (
+      audioAlarmEnabled &&
+      times?.isGayatriTime &&
+      !audioAlarmSentRef.current
+    ) {
+      audioAlarmSentRef.current = true;
+      playGayatriChime();
+    }
+    if (!times?.isGayatriTime) {
+      audioAlarmSentRef.current = false;
+    }
+  }, [times?.isGayatriTime, audioAlarmEnabled]);
 
   // ── Manual refresh ─────────────────────────────────────────────
 
@@ -780,11 +848,13 @@ export default function Landing() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
                   className="notebook-reveal notebook-reveal-delay-3"
-                >
-                  <CountdownDisplay
+                >                    <CountdownDisplay
                     times={times}
                     notificationsEnabled={notificationsEnabled}
+                    audioAlarmEnabled={audioAlarmEnabled}
                     onToggleNotifications={toggleNotifications}
+                    onToggleAudio={toggleAudioAlarm}
+                    onTestAlarm={handleTestAlarm}
                   />
                 </motion.div>
 

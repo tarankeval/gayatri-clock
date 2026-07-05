@@ -566,6 +566,123 @@ export async function getLocationName(
   }
 }
 
+// ─── Audio Alarm (Web Audio API) ─────────────────────────────────────
+
+let _audioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!_audioCtx) {
+    _audioCtx = new AudioContext();
+  }
+  return _audioCtx;
+}
+
+/**
+ * Play a gentle chime / bell sound to signal the start of Gayatri Muhurta.
+ * Uses layered sine oscillators with exponential decay for a soft, resonant bell tone.
+ */
+export function playGayatriChime(): void {
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+
+    const now = ctx.currentTime;
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.25, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 5);
+    masterGain.connect(ctx.destination);
+
+    // ── Bell / Chime Layer ──────────────────────────────────────────
+    // A C major-like chord with gentle inharmonic partials for a bell timbre
+    const bellFreqs = [523.25, 659.25, 783.99, 1046.5, 1318.5]; // C5, E5, G5, C6, E6
+    const bellGain = ctx.createGain();
+    bellGain.gain.setValueAtTime(0.3, now);
+    bellGain.gain.exponentialRampToValueAtTime(0.001, now + 4.5);
+    bellGain.connect(masterGain);
+
+    bellFreqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq * (1 + i * 0.003), now); // slight detune for richness
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.15 / (i + 1), now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 4.5 - i * 0.3);
+      osc.connect(gain);
+      gain.connect(bellGain);
+      osc.start(now + 0.05);
+      osc.stop(now + 5);
+    });
+
+    // ── Soft attack transient ─────────────────────────────────────
+    const transientOsc = ctx.createOscillator();
+    transientOsc.type = "triangle";
+    transientOsc.frequency.setValueAtTime(1800, now);
+    const transientGain = ctx.createGain();
+    transientGain.gain.setValueAtTime(0.08, now);
+    transientGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    transientOsc.connect(transientGain);
+    transientGain.connect(masterGain);
+    transientOsc.start(now);
+    transientOsc.stop(now + 0.5);
+
+    // ── OM / Drone Layer ───────────────────────────────────────────
+    // A low, meditative drone with subtle harmonics
+    const droneFundamental = 65.41; // C2 — deep grounding tone
+    const droneHarmonics = [1, 3, 5, 7, 9]; // odd harmonics for a rich, reed-like timbre
+    const droneGain = ctx.createGain();
+    droneGain.gain.setValueAtTime(0, now + 0.2);
+    droneGain.gain.linearRampToValueAtTime(0.12, now + 1.0);
+    droneGain.gain.setValueAtTime(0.12, now + 3.5);
+    droneGain.gain.exponentialRampToValueAtTime(0.001, now + 5.5);
+    droneGain.connect(masterGain);
+
+    droneHarmonics.forEach((h, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(droneFundamental * h, now);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.04 / (i + 1), now);
+      osc.connect(g);
+      g.connect(droneGain);
+      osc.start(now + 0.2);
+      osc.stop(now + 6);
+    });
+
+    // ── Subtle wind/pad layer ─────────────────────────────────────
+    const padGain = ctx.createGain();
+    padGain.gain.setValueAtTime(0, now + 0.5);
+    padGain.gain.linearRampToValueAtTime(0.04, now + 1.5);
+    padGain.gain.exponentialRampToValueAtTime(0.001, now + 6);
+    padGain.connect(masterGain);
+
+    [261.63, 329.63, 392.0].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, now);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.008, now);
+      osc.connect(g);
+      g.connect(padGain);
+      osc.start(now + 0.5);
+      osc.stop(now + 6.5);
+    });
+
+    // ── Conclude ────────────────────────────────────────────────
+    masterGain.gain.setValueAtTime(0.001, now + 6);
+  } catch {
+    // Silently fail — audio is a non-critical feature
+  }
+}
+
+/**
+ * Play a short test chime so users can preview the alarm sound.
+ */
+export function playTestChime(): void {
+  playGayatriChime();
+}
+
 // ─── Time Formatting ───────────────────────────────────────────────────
 
 /**
