@@ -1201,13 +1201,14 @@ export function hasWakeLock(): boolean {
 // ─── Time Formatting ───────────────────────────────────────────────────
 
 /**
- * Format a Date to a time string (HH:MM AM/PM).
+ * Format a Date to a time string (HH:MM AM/PM or HH:MM for 24h).
+ * @param locale - locale string (e.g. "en-US" for 12h, "ru-RU" for 24h)
  */
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-US", {
+export function formatTime(date: Date, locale: string = "en-US"): string {
+  return date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
+    hour12: locale.startsWith("en"),
   });
 }
 

@@ -69,6 +69,7 @@ import {
   releaseWakeLock,
   hasWakeLock,
 } from "@/lib/gayatri";
+import { useTranslation } from "@/lib/i18n";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ function TimeBlock({
   active?: boolean;
   highlight?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -120,7 +122,7 @@ function TimeBlock({
       </div>
       {active && (
         <span className="flex-shrink-0 text-xs font-semibold text-[oklch(0.55_0.15_50)] bg-[oklch(0.65_0.15_50_/_0.1)] px-2 py-1 rounded-full">
-          ● NOW
+          {t("timeBlocks.now")}
         </span>
       )}
     </div>
@@ -130,6 +132,7 @@ function TimeBlock({
 // ─── Sub-component: Timeline Bar ───────────────────────────────────────
 
 function TimelineBar({ times }: { times: GayatriTimes }) {
+  const { t } = useTranslation();
   const totalDuration =
     times.sunrise.getTime() -
     times.brahmaMuhurtaStart.getTime() +
@@ -161,7 +164,7 @@ function TimelineBar({ times }: { times: GayatriTimes }) {
 
   return (
     <div className="notebook-card mt-4">
-      <div className="notebook-label mb-3">Time Timeline</div>
+      <div className="notebook-label mb-3">{t("timeline.title")}</div>
 
       {/* Timeline track */}
       <div className="relative h-8 bg-secondary/50 rounded-sm overflow-hidden">
@@ -219,12 +222,12 @@ function TimelineBar({ times }: { times: GayatriTimes }) {
 
       {/* Timeline labels */}
       <div className="flex justify-between mt-2 text-[11px] text-muted-foreground font-[var(--notebook-font)]">
-        <span>Pre-dawn</span>
-        <span>Brahma Muhurta</span>
+        <span>{t("timeline.predawn")}</span>
+        <span>{t("timeline.brahma")}</span>
         <span className="text-[oklch(0.55_0.12_50)] font-semibold">
-          Gayatri
+          {t("timeline.gayatri")}
         </span>
-        <span>Sunrise</span>
+        <span>{t("timeline.sunrise")}</span>
       </div>
     </div>
   );
@@ -233,19 +236,20 @@ function TimelineBar({ times }: { times: GayatriTimes }) {
 // ─── Sub-component: Panchang Card ─────────────────────────────────────
 
 function PanchangCard({ panchang }: { panchang: Panchang | null }) {
+  const { t } = useTranslation();
   if (!panchang) return null;
 
   return (
     <div className="notebook-card mt-4">
       <div className="flex items-center gap-2 mb-3">
         <Calendar className="w-4 h-4 text-muted-foreground" />
-        <span className="notebook-label">Hindu Calendar — Panchang</span>
+        <span className="notebook-label">{t("panchang.title")}</span>
       </div>
 
       <table className="notebook-timetable">
         <tbody>
           <tr>
-            <td className="text-muted-foreground w-28">Tithi</td>
+            <td className="text-muted-foreground w-28">{t("panchang.tithi")}</td>
             <td className="font-medium">
               {panchang.tithi.name}
               <span className="text-muted-foreground text-xs ml-1">
@@ -254,7 +258,7 @@ function PanchangCard({ panchang }: { panchang: Panchang | null }) {
             </td>
           </tr>
           <tr>
-            <td className="text-muted-foreground">Nakshatra</td>
+            <td className="text-muted-foreground">{t("panchang.nakshatra")}</td>
             <td className="font-medium">
               {panchang.nakshatra.name}
               <span className="text-muted-foreground text-xs ml-1">
@@ -263,26 +267,26 @@ function PanchangCard({ panchang }: { panchang: Panchang | null }) {
             </td>
           </tr>
           <tr>
-            <td className="text-muted-foreground">Yoga</td>
+            <td className="text-muted-foreground">{t("panchang.yoga")}</td>
             <td className="font-medium">{panchang.yoga.name}</td>
           </tr>
           <tr>
-            <td className="text-muted-foreground">Karana</td>
+            <td className="text-muted-foreground">{t("panchang.karana")}</td>
             <td className="font-medium">{panchang.karana.name}</td>
           </tr>
           <tr>
-            <td className="text-muted-foreground">Month</td>
+            <td className="text-muted-foreground">{t("panchang.month")}</td>
             <td className="font-medium">{panchang.hinduMonth}</td>
           </tr>
           <tr>
-            <td className="text-muted-foreground">Year</td>
+            <td className="text-muted-foreground">{t("panchang.year")}</td>
             <td className="font-medium">{panchang.samvatYear}</td>
           </tr>
         </tbody>
       </table>
 
       <div className="notebook-note mt-3">
-        Ayanamsa: {panchang.ayanamsa} · Calculated at local sunrise
+        {t("panchang.footer", { ayanamsa: panchang.ayanamsa })}
       </div>
     </div>
   );
@@ -297,6 +301,7 @@ function CountdownDisplay({
   onToggleNotifications,
   onToggleAudio,
   onTestAlarm,
+  dateLocale = "en-US",
 }: {
   times: GayatriTimes;
   notificationsEnabled: boolean;
@@ -304,13 +309,15 @@ function CountdownDisplay({
   onToggleNotifications: () => void;
   onToggleAudio: () => void;
   onTestAlarm: () => void;
+  dateLocale?: string;
 }) {
+  const { t } = useTranslation();
   const [display, setDisplay] = useState("");
 
   useEffect(() => {
     const update = () => {
       if (times.isGayatriTime) {
-        setDisplay("◆ Gayatri Time is Now ◆");
+        setDisplay("◆ " + t("countdown.gayatriActive") + " ◆");
       } else {
         setDisplay(formatCountdown(times.msUntilNextEvent));
       }
@@ -318,7 +325,7 @@ function CountdownDisplay({
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [times]);
+  }, [times, t]);
 
   const isActive = times.isGayatriTime;
   const isSoon = !isActive && times.msUntilNextEvent < 10 * 60 * 1000; // within 10 min
@@ -327,12 +334,12 @@ function CountdownDisplay({
     <div className="notebook-card mt-4 text-center">
       <div className="notebook-label mb-2">
         {isActive
-          ? "Gayatri Muhurta — Active Now"
+          ? t("countdown.gayatriActive")
           : times.nextEvent === "gayatri"
-            ? "Time until Gayatri Muhurta"
+            ? t("countdown.untilGayatri")
             : times.nextEvent === "brahma"
-              ? "Time until Brahma Muhurta"
-              : "Time until Sunrise"}
+              ? t("countdown.untilBrahma")
+              : t("countdown.untilSunrise")}
       </div>
 
       <div
@@ -355,15 +362,13 @@ function CountdownDisplay({
 
       {isActive && (
         <div className="notebook-annotation mt-2">
-          The sacred Gayatri Mantra is most potent now. Three conditions align:
-          the final Muhurta before sunrise, the Savitur energy, and the
-          transition from night to day.
+          {t("countdown.description")}
         </div>
       )}
 
       {isSoon && !isActive && (
         <div className="notebook-annotation mt-2 text-[oklch(0.6_0.1_45)]">
-          Gayatri time is approaching. Prepare for meditation.
+          {t("countdown.approaching")}
         </div>
       )}
 
@@ -383,7 +388,7 @@ function CountdownDisplay({
             <BellOff className="w-4 h-4" />
           )}
           <span className="font-[var(--notebook-font)]">
-            {notificationsEnabled ? "Browser Alert" : "Notify me"}
+            {notificationsEnabled ? t("countdown.browserAlert") : t("countdown.notifyMe")}
           </span>
         </button>
 
@@ -404,7 +409,7 @@ function CountdownDisplay({
             <VolumeX className="w-4 h-4" />
           )}
           <span className="font-[var(--notebook-font)]">
-            {audioAlarmEnabled ? "Audio On" : "Sound Off"}
+            {audioAlarmEnabled ? t("countdown.audioOn") : t("countdown.soundOff")}
           </span>
         </button>
 
@@ -414,13 +419,13 @@ function CountdownDisplay({
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <Music className="w-3 h-3" />
-            <span className="font-[var(--notebook-font)]">Test</span>
+            <span className="font-[var(--notebook-font)]">{t("countdown.test")}</span>
           </button>
         )}
 
         <span className="text-muted-foreground text-xs font-[var(--notebook-font)]">
-          Next: {times.nextEvent === "gayatri" ? "Gayatri" : times.nextEvent === "brahma" ? "Brahma" : "Sunrise"} at{" "}
-          {times.nextEventTime ? formatTime(times.nextEventTime) : "—"}
+          {t("countdown.next")}: {times.nextEvent === "gayatri" ? t("timeBlocks.gayatri").replace(" (Savitur)", "") : times.nextEvent === "brahma" ? t("timeBlocks.brahma") : t("timeBlocks.sunrise")} {t("countdown.at")}{" "}
+          {times.nextEventTime ? formatTime(times.nextEventTime, dateLocale) : "—"}
         </span>
       </div>
     </div>
@@ -438,6 +443,7 @@ function LocationPicker({
   onLocationChange: (loc: LocationInfo) => void;
   onClearSaved?: () => void;
 }) {
+  const { t } = useTranslation();
   const [latInput, setLatInput] = useState(location.lat.toString());
   const [lngInput, setLngInput] = useState(location.lng.toString());
   const [isEditing, setIsEditing] = useState(false);
@@ -504,26 +510,26 @@ function LocationPicker({
     <div className="notebook-card">
       <div className="flex items-center gap-2 mb-3">
         <MapPin className="w-4 h-4 text-muted-foreground" />
-        <span className="notebook-label">Location</span>
+        <span className="notebook-label">{t("locationPicker.title")}</span>
       </div>
 
       {isEditing ? (
         <div className="space-y-3">
           {/* City search */}
           <div>
-            <Label className="notebook-note">Search for a city</Label>
+            <Label className="notebook-note">{t("locationPicker.searchCity")}</Label>
             <div className="relative mt-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
-                placeholder="e.g. Varanasi, Delhi, Moscow..."
+                placeholder={t("locationPicker.searchPlaceholder")}
                 className="h-9 pl-8 text-sm font-[var(--notebook-font)]"
               />
             </div>
             {isSearching && (
               <div className="text-xs text-muted-foreground mt-1 italic font-[var(--notebook-font)]">
-                Searching...
+                {t("locationPicker.searching")}
               </div>
             )}
             {searchResults.length > 0 && (
@@ -538,7 +544,7 @@ function LocationPicker({
                     <div className="text-xs text-muted-foreground truncate">
                       {result.country}
                       <span className="mx-1">·</span>
-                      {result.lat.toFixed(4)}°N, {result.lng.toFixed(4)}°E
+                      {result.lat.toFixed(4)}°{result.lat >= 0 ? "N" : "S"}, {result.lng.toFixed(4)}°{result.lng >= 0 ? "E" : "W"}
                     </div>
                   </button>
                 ))}
@@ -549,25 +555,25 @@ function LocationPicker({
           {/* Manual coordinate entry */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="notebook-note">Or enter coordinates</span>
+              <span className="notebook-note">{t("locationPicker.orEnterCoords")}</span>
               <span className="flex-1 border-t border-dashed border-border" />
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
-                <Label className="notebook-note">Latitude</Label>
+                <Label className="notebook-note">{t("locationPicker.latitude")}</Label>
                 <Input
                   value={latInput}
                   onChange={(e) => setLatInput(e.target.value)}
-                  placeholder="e.g. 27.1751"
+                  placeholder={t("locationPicker.latPlaceholder")}
                   className="h-8 text-sm font-[var(--notebook-font)]"
                 />
               </div>
               <div className="flex-1">
-                <Label className="notebook-note">Longitude</Label>
+                <Label className="notebook-note">{t("locationPicker.longitude")}</Label>
                 <Input
                   value={lngInput}
                   onChange={(e) => setLngInput(e.target.value)}
-                  placeholder="e.g. 78.0421"
+                  placeholder={t("locationPicker.lngPlaceholder")}
                   className="h-8 text-sm font-[var(--notebook-font)]"
                 />
               </div>
@@ -580,7 +586,7 @@ function LocationPicker({
               onClick={handleApply}
               className="h-8 text-xs font-[var(--notebook-font)]"
             >
-              Apply Coordinates
+              {t("locationPicker.apply")}
             </Button>
             <Button
               size="sm"
@@ -588,7 +594,7 @@ function LocationPicker({
               onClick={() => setIsEditing(false)}
               className="h-8 text-xs font-[var(--notebook-font)]"
             >
-              Cancel
+              {t("locationPicker.cancel")}
             </Button>
             <Button
               size="sm"
@@ -597,7 +603,7 @@ function LocationPicker({
               className="h-8 text-xs font-[var(--notebook-font)] ml-auto"
             >
               <RefreshCw className="w-3 h-3 mr-1" />
-              Auto-detect
+              {t("locationPicker.autoDetect")}
             </Button>
           </div>
         </div>
@@ -609,7 +615,7 @@ function LocationPicker({
                 {location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`}
               </div>
               <div className="notebook-note">
-                {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
+                {t("locationPicker.coordsFormat", { lat: location.lat.toFixed(4), lng: location.lng.toFixed(4) })}
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -619,7 +625,7 @@ function LocationPicker({
                 onClick={() => setIsEditing(true)}
                 className="h-8 text-xs font-[var(--notebook-font)]"
               >
-                Change
+                {t("locationPicker.change")}
               </Button>
             </div>
           </div>
@@ -628,7 +634,7 @@ function LocationPicker({
               onClick={onClearSaved}
               className="text-xs text-muted-foreground hover:text-destructive transition-colors mt-1 font-[var(--notebook-font)]"
             >
-              Clear saved location
+              {t("locationPicker.clearSaved")}
             </button>
           )}
         </div>
@@ -639,7 +645,8 @@ function LocationPicker({
 
 // ─── Sub-component: Schedule View ────────────────────────────────────
 
-function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
+function ScheduleView({ lat, lng, dateLocale = "en-US" }: { lat: number; lng: number; dateLocale?: string }) {
+  const { t } = useTranslation();
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [viewMode, setViewMode] = useState<7 | 30>(7);
   const [isLoading, setIsLoading] = useState(true);
@@ -669,7 +676,7 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-muted-foreground" />
-          <span className="notebook-label">Upcoming Schedule</span>
+          <span className="notebook-label">{t("schedule.title")}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -681,7 +688,7 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            7 Days
+            {t("schedule.days7")}
           </button>
           <button
             onClick={() => setViewMode(30)}
@@ -692,18 +699,18 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            30 Days
+            {t("schedule.days30")}
           </button>
         </div>
       </div>
 
       {isLoading ? (
         <div className="text-center py-6">
-          <div className="notebook-note">Loading schedule...</div>
+          <div className="notebook-note">{t("schedule.loading")}</div>
         </div>
       ) : schedule.length === 0 ? (
         <div className="text-center py-6">
-          <div className="notebook-note">Could not load schedule for this location.</div>
+          <div className="notebook-note">{t("schedule.empty")}</div>
         </div>
       ) : (
         <div className="overflow-x-auto -mx-1">
@@ -711,12 +718,12 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
           <table className="notebook-timetable text-xs min-w-full">
             <thead>
               <tr>
-                <th className="py-1.5 px-1 w-20">Date</th>
-                <th className="py-1.5 px-1">Gayatri</th>
-                <th className="py-1.5 px-1 hidden sm:table-cell">Brahma</th>
-                <th className="py-1.5 px-1">Sunrise</th>
-                <th className="py-1.5 px-1 hidden md:table-cell">Tithi</th>
-                <th className="py-1.5 px-1 hidden lg:table-cell">Nakshatra</th>
+                <th className="py-1.5 px-1 w-20">{t("schedule.date")}</th>
+                <th className="py-1.5 px-1">{t("schedule.gayatri")}</th>
+                <th className="py-1.5 px-1 hidden sm:table-cell">{t("schedule.brahma")}</th>
+                <th className="py-1.5 px-1">{t("schedule.sunrise")}</th>
+                <th className="py-1.5 px-1 hidden md:table-cell">{t("schedule.tithi")}</th>
+                <th className="py-1.5 px-1 hidden lg:table-cell">{t("schedule.nakshatra")}</th>
               </tr>
             </thead>
             <tbody>
@@ -743,7 +750,7 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
                     </div>
                     {day.isToday && (
                       <span className="text-[10px] font-semibold text-[oklch(0.55_0.15_50)]">
-                        TODAY
+                        {t("schedule.today")}
                       </span>
                     )}
                   </td>
@@ -754,22 +761,22 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
                           "text-[oklch(0.55_0.15_50)] font-semibold",
                       )}
                     >
-                      {formatTime(day.gayatriStart)}
+                      {formatTime(day.gayatriStart, dateLocale)}
                     </span>
                     <span className="text-muted-foreground mx-0.5">—</span>
                     <span className="text-muted-foreground">
-                      {formatTime(day.gayatriEnd)}
+                      {formatTime(day.gayatriEnd, dateLocale)}
                     </span>
                   </td>
                   <td className="py-2 px-1 whitespace-nowrap hidden sm:table-cell">
-                    <span>{formatTime(day.brahmaStart)}</span>
+                    <span>{formatTime(day.brahmaStart, dateLocale)}</span>
                     <span className="text-muted-foreground mx-0.5">—</span>
                     <span className="text-muted-foreground">
-                      {formatTime(day.brahmaEnd)}
+                      {formatTime(day.brahmaEnd, dateLocale)}
                     </span>
                   </td>
                   <td className="py-2 px-1 whitespace-nowrap">
-                    {formatTime(day.sunrise)}
+                    {formatTime(day.sunrise, dateLocale)}
                   </td>
                   <td className="py-2 px-1 text-muted-foreground hidden md:table-cell">
                     {day.tithi}
@@ -785,7 +792,7 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
       )}
 
       <div className="notebook-note mt-2">
-        Based on Muhurta length ≈ {schedule[0]?.muhurtaLengthMinutes.toFixed(1) || "—"} min/day
+        {t("schedule.footer", { minutes: schedule[0]?.muhurtaLengthMinutes.toFixed(1) || "—" })}
       </div>
     </div>
   );
@@ -794,6 +801,8 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
 // ─── Main App ──────────────────────────────────────────────────────────
 
 export default function Landing() {
+  const { t, tHtml, lang, setLang } = useTranslation();
+  const dateLocale = t("app.dateFormat");
   const [location, setLocation] = useState<LocationInfo | null>(null);
   const [appState, setAppState] = useState<AppState>("loading");
   const [times, setTimes] = useState<GayatriTimes | null>(null);
@@ -1141,10 +1150,10 @@ export default function Landing() {
               <div>
                 <h1 className="notebook-title flex items-center gap-3">
                   <Sun className="w-7 h-7 text-[oklch(0.65_0.12_50)]" />
-                  Gayatri Time
+                  {t("app.title")}
                 </h1>
                 <div className="notebook-date mt-1">
-                  {new Date().toLocaleDateString("en-US", {
+                  {new Date().toLocaleDateString(dateLocale, {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
@@ -1157,16 +1166,23 @@ export default function Landing() {
                   <button
                     onClick={handleInstall}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
-                    title="Install app"
+                    title={t("app.install")}
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Install</span>
+                    <span className="hidden sm:inline">{t("app.install")}</span>
                   </button>
                 )}
                 <button
+                  onClick={() => setLang(lang === "en" ? "ru" : "en")}
+                  className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors text-xs font-semibold"
+                  title={lang === "en" ? "Русский" : "English"}
+                >
+                  {lang === "en" ? "RU" : "EN"}
+                </button>
+                <button
                   onClick={handleShare}
                   className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
-                  title="Share today's times"
+                  title={t("app.shareTitle")}
                   disabled={appState !== "ready"}
                 >
                   <Share2 className="w-3.5 h-3.5" />
@@ -1174,7 +1190,7 @@ export default function Landing() {
                 <button
                   onClick={cycleTheme}
                   className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
-                  title={`Switch theme (${themeLabel[theme]})`}
+                  title={`${t("app.switchTheme")} (${t(`theme.${theme}`)})`}
                 >
                   {themeNextIcon[theme]}
                 </button>
@@ -1203,9 +1219,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="notebook-annotation mt-3">
-              The intersection of three sacred conditions — the final Muhurta
-              before sunrise, spatial alignment with the solar deity Savitur,
-              and the daily cycle of spiritual renewal.
+              {t("app.subtitle")}
             </div>
           </motion.div>
 
@@ -1218,7 +1232,7 @@ export default function Landing() {
               className="flex flex-col items-center justify-center py-20"
             >
               <div className="w-12 h-12 rounded-full border-2 border-border border-t-[oklch(0.65_0.12_50)] animate-spin mb-4" />
-              <div className="notebook-note">Locating & calculating...</div>
+              <div className="notebook-note">{t("loading.title")}</div>
             </motion.div>
           )}
 
@@ -1232,16 +1246,15 @@ export default function Landing() {
             >
               <MapPin className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
               <h2 className="text-xl font-bold font-[var(--notebook-font)] mb-2">
-                Where are you?
+                {t("locationPrompt.title")}
               </h2>
               <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto font-[var(--notebook-font)]">
-                Gayatri Muhurta is calculated based on your local sunrise
-                time. Share your location or enter coordinates manually.
+                {t("locationPrompt.description")}
               </p>
               <div className="flex gap-3 justify-center">
                 <Button onClick={initLocation} className="font-[var(--notebook-font)]">
                   <MapPin className="w-4 h-4 mr-2" />
-                  Use My Location
+                  {t("locationPrompt.useMyLocation")}
                 </Button>
                 <Button
                   variant="outline"
@@ -1249,7 +1262,7 @@ export default function Landing() {
                   className="font-[var(--notebook-font)]"
                 >
                   <Compass className="w-4 h-4 mr-2" />
-                  Varanasi (Default)
+                  {t("locationPrompt.defaultLocation")}
                 </Button>
               </div>
             </motion.div>
@@ -1265,14 +1278,14 @@ export default function Landing() {
             >
               <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-destructive" />
               <h2 className="text-xl font-bold font-[var(--notebook-font)] mb-2">
-                Calculation Error
+                {t("error.title")}
               </h2>
               <p className="text-sm text-muted-foreground mb-4 font-[var(--notebook-font)]">
                 {errorMessage}
               </p>
               <Button onClick={handleRefresh} className="font-[var(--notebook-font)]">
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Try Again
+                {t("error.retry")}
               </Button>
             </motion.div>
           )}
@@ -1309,9 +1322,9 @@ export default function Landing() {
                 className="notebook-reveal notebook-reveal-delay-2"
               >
                 <div className="notebook-card text-center py-3">
-                  <div className="notebook-label">Current Time</div>
+                  <div className="notebook-label">{t("currentTime.label")}</div>
                   <div className="text-3xl font-bold font-[var(--notebook-font)] tracking-tight mt-1">
-                    {formatTime(times.now)}
+                    {formatTime(times.now, dateLocale)}
                   </div>
                 </div>
               </motion.div>
@@ -1330,6 +1343,7 @@ export default function Landing() {
                   onToggleNotifications={toggleNotifications}
                   onToggleAudio={toggleAudioAlarm}
                   onTestAlarm={handleTestAlarm}
+                  dateLocale={dateLocale}
                 />
               </motion.div>
 
@@ -1342,30 +1356,31 @@ export default function Landing() {
               >
                 <div className="notebook-label mb-1 flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5" />
-                  Sacred Time Windows
+                  {t("timeBlocks.title")}
                 </div>
 
                 <TimeBlock
-                  label="Brahma Muhurta"
-                  time={`${formatTime(times.brahmaMuhurtaStart)} — ${formatTime(times.brahmaMuhurtaEnd)}`}
+                  label={t("timeBlocks.brahma")}
+                  time={`${formatTime(times.brahmaMuhurtaStart, dateLocale)} — ${formatTime(times.brahmaMuhurtaEnd, dateLocale)}`}
                   icon={Moon}
                   active={times.isBrahmaMuhurta && !times.isGayatriTime}
                   highlight={times.isBrahmaMuhurta}
                 />
                 <TimeBlock
-                  label="Gayatri Muhurta (Savitur)"
-                  time={`${formatTime(times.gayatriMuhurtaStart)} — ${formatTime(times.gayatriMuhurtaEnd)}`}
+                  label={t("timeBlocks.gayatri")}
+                  time={`${formatTime(times.gayatriMuhurtaStart, dateLocale)} — ${formatTime(times.gayatriMuhurtaEnd, dateLocale)}`}
                   icon={Sun}
                   active={times.isGayatriTime}
                   highlight={times.isGayatriTime}
                 />
                 <TimeBlock
-                  label="Sunrise"
-                  time={formatTime(times.sunrise)}                icon={SunriseIcon}
-              />
+                  label={t("timeBlocks.sunrise")}
+                  time={formatTime(times.sunrise, dateLocale)}
+                  icon={SunriseIcon}
+                />
                 <TimeBlock
-                  label="Sunset"
-                  time={formatTime(times.sunset)}
+                  label={t("timeBlocks.sunset")}
+                  time={formatTime(times.sunset, dateLocale)}
                   icon={SunsetIcon}
                 />
               </motion.div>
@@ -1398,25 +1413,17 @@ export default function Landing() {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Compass className="w-4 h-4 text-muted-foreground" />
-                  <span className="notebook-label">About This Calculation</span>
+                  <span className="notebook-label">{t("about.title")}</span>
                 </div>
                 <div className="space-y-2 text-sm font-[var(--notebook-font)] leading-relaxed">
                   <p>
-                    In Vedic timekeeping, one full day (sunrise to next
-                    sunrise) is divided into <span className="notebook-highlight">30 equal Muhurtas</span>.
+                    {tHtml("about.p1", { count: "30" })}
                   </p>
                   <p>
-                    The <strong>30th Muhurta</strong> (Savitur/Gayatri) ends
-                    exactly at sunrise. Its length is{" "}
-                    <strong>{times.muhurtaLengthMinutes.toFixed(1)} minutes</strong>{" "}
-                    today, calculated from the duration between successive
-                    sunrises divided by 30.
+                    {tHtml("about.p2", { minutes: times.muhurtaLengthMinutes.toFixed(1) })}
                   </p>
                   <p>
-                    The <strong>29th Muhurta</strong> (Brahma) precedes Gayatri,
-                    together forming the Brahma Muhurta period — the most
-                    auspicious time for spiritual practice in the Hindu
-                    tradition.
+                    {tHtml("about.p3")}
                   </p>
                 </div>
               </motion.div>
@@ -1428,14 +1435,13 @@ export default function Landing() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <ScheduleView lat={location.lat} lng={location.lng} />
+                  <ScheduleView lat={location.lat} lng={location.lng} dateLocale={dateLocale} />
                 </motion.div>
               )}
 
               {/* Footer */}
               <div className="notebook-note text-center pt-4 pb-8">
-                Gayatri Time Calculator · Notebook Edition ·{" "}
-                {new Date().getFullYear()}
+                {t("footer.text", { year: String(new Date().getFullYear()) })}
               </div>
             </motion.div>
           )}
@@ -1446,16 +1452,42 @@ export default function Landing() {
               <SheetHeader className="notebook-header !pb-3 !mb-0">
                 <SheetTitle className="notebook-title !text-xl flex items-center gap-2">
                   <Settings className="w-5 h-5" />
-                  Settings
+                  {t("settings.title")}
                 </SheetTitle>
               </SheetHeader>
 
               <div className="flex-1 overflow-y-auto px-4 space-y-5 pb-6 font-[var(--notebook-font)]">
+                {/* ── Language ── */}
+                <div>
+                  <div className="notebook-label flex items-center gap-2 mb-2">
+                    <Sun className="w-3.5 h-3.5" />
+                    {t("language.label")}
+                  </div>
+                  <div className="flex gap-2">
+                    {(["en", "ru"] as const).map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => setLang(l)}
+                        className={cn(
+                          "flex-1 py-2 px-3 text-xs rounded-sm border transition-all font-[var(--notebook-font)] capitalize",
+                          lang === l
+                            ? "border-[oklch(0.65_0.12_50)] bg-[oklch(0.65_0.12_50_/_0.1)] text-[oklch(0.55_0.12_50)] font-semibold"
+                            : "border-border text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {t(`language.${l}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
                 {/* ── Theme ── */}
                 <div>
                   <div className="notebook-label flex items-center gap-2 mb-2">
                     <SunMoon className="w-3.5 h-3.5" />
-                    Theme
+                    {t("settings.theme")}
                   </div>
                   <div className="flex gap-2">
                     {(["light", "sepia", "dark"] as ThemeMode[]).map((mode) => (
@@ -1470,7 +1502,7 @@ export default function Landing() {
                         )}
                       >
                         {mode === "light" ? <Sun className="w-3 h-3 mx-auto mb-1" /> : mode === "sepia" ? <Sun className="w-3 h-3 mx-auto mb-1" /> : <Moon className="w-3 h-3 mx-auto mb-1" />}
-                        {mode}
+                        {t(`theme.${mode}`)}
                       </button>
                     ))}
                   </div>
@@ -1482,11 +1514,11 @@ export default function Landing() {
                 <div>
                   <div className="notebook-label flex items-center gap-2 mb-2">
                     <Bell className="w-3.5 h-3.5" />
-                    Browser Alert
+                    {t("settings.browserAlert")}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-[var(--notebook-font)]">
-                      Notify when Gayatri time starts
+                      {t("settings.notifyLabel")}
                     </span>
                     <Switch
                       checked={notificationsEnabled}
@@ -1494,7 +1526,7 @@ export default function Landing() {
                     />
                   </div>
                   <div className="notebook-note mt-1">
-                    Sends a browser notification when Gayatri Muhurta begins.
+                    {t("settings.notifyDesc")}
                   </div>
                 </div>
 
@@ -1504,11 +1536,11 @@ export default function Landing() {
                 <div>
                   <div className="notebook-label flex items-center gap-2 mb-2">
                     <Volume2 className="w-3.5 h-3.5" />
-                    Audio Alarm
+                    {t("settings.audioAlarm")}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-[var(--notebook-font)]">
-                      Gentle chime on Gayatri time
+                      {t("settings.audioLabel")}
                     </span>
                     <Switch
                       checked={audioAlarmEnabled}
@@ -1516,7 +1548,7 @@ export default function Landing() {
                     />
                   </div>
                   <div className="notebook-note mt-1 mb-2">
-                    Plays a layered chime with OM drone when Gayatri time starts.
+                    {t("settings.audioDesc")}
                   </div>
                   {audioAlarmEnabled && (
                     <button
@@ -1524,7 +1556,7 @@ export default function Landing() {
                       className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
                     >
                       <Music className="w-3 h-3" />
-                      Test chime
+                      {t("settings.testChime")}
                     </button>
                   )}
                 </div>
@@ -1535,11 +1567,11 @@ export default function Landing() {
                 <div>
                   <div className="notebook-label flex items-center gap-2 mb-2">
                     <Sun className="w-3.5 h-3.5" />
-                    Keep Screen On
+                    {t("settings.screenOn")}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-[var(--notebook-font)]">
-                      Prevent screen dimming
+                      {t("settings.screenLabel")}
                     </span>
                     <div className={cn(
                       "text-xs font-semibold px-2 py-0.5 rounded-full",
@@ -1549,11 +1581,11 @@ export default function Landing() {
                           ? "bg-yellow-500/10 text-yellow-600"
                           : "text-muted-foreground"
                     )}>
-                      {wakeLockActive ? "Active" : times?.isGayatriTime ? "Unavailable" : "Standby"}
+                      {wakeLockActive ? t("settings.screenStatusActive") : times?.isGayatriTime ? t("settings.screenStatusUnavailable") : t("settings.screenStatusStandby")}
                     </div>
                   </div>
                   <div className="notebook-note mt-1">
-                    Automatically keeps your screen awake during Gayatri time.
+                    {t("settings.screenDesc")}
                   </div>
                 </div>
 
@@ -1563,15 +1595,15 @@ export default function Landing() {
                 <div>
                   <div className="notebook-label flex items-center gap-2 mb-2">
                     <CalendarDays className="w-3.5 h-3.5" />
-                    Export
+                    {t("settings.export")}
                   </div>
                   <button
                     onClick={handleExportICS}
                     className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)]"
                   >
-                    <div className="font-medium">Export to Calendar (.ics)</div>
+                    <div className="font-medium">{t("settings.exportCalendar")}</div>
                     <div className="notebook-note">
-                      Add 30 days of Gayatri times to Google / Apple Calendar
+                      {t("settings.exportCalendarDesc")}
                     </div>
                   </button>
                   {times && location && (
@@ -1579,9 +1611,9 @@ export default function Landing() {
                       onClick={handleShare}
                       className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)] mt-2"
                     >
-                      <div className="font-medium">Share as Text</div>
+                      <div className="font-medium">{t("settings.shareText")}</div>
                       <div className="notebook-note">
-                        Copy today's times to clipboard or share via system share
+                        {t("settings.shareTextDesc")}
                       </div>
                     </button>
                   )}
@@ -1593,13 +1625,13 @@ export default function Landing() {
                 <div>
                   <div className="notebook-label flex items-center gap-2 mb-2">
                     <MapPin className="w-3.5 h-3.5" />
-                    Current Location
+                    {t("settings.currentLocation")}
                   </div>
                   {location && (
                     <div className="text-sm font-[var(--notebook-font)]">
                       <div>{location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`}</div>
                       <div className="notebook-note">
-                        {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
+                        {t("locationPicker.coordsFormat", { lat: location.lat.toFixed(4), lng: location.lng.toFixed(4) })}
                       </div>
                     </div>
                   )}
@@ -1607,7 +1639,7 @@ export default function Landing() {
                     onClick={handleClearSavedLocation}
                     className="text-xs text-muted-foreground hover:text-destructive transition-colors mt-2 font-[var(--notebook-font)]"
                   >
-                    Clear saved location &amp; re-prompt
+                    {t("locationPicker.clearSavedSettings")}
                   </button>
                 </div>
 
@@ -1617,23 +1649,17 @@ export default function Landing() {
                 <div>
                   <div className="notebook-label flex items-center gap-2 mb-2">
                     <Info className="w-3.5 h-3.5" />
-                    About
+                    {t("settings.about")}
                   </div>
                   <div className="text-sm font-[var(--notebook-font)] leading-relaxed">
                     <p className="mb-2">
-                      Gayatri Time calculates the exact Muhurta (Vedic time
-                      window) when three sacred conditions align for chanting
-                      the Gayatri Mantra.
+                      {t("settings.aboutDesc")}
                     </p>
                     <p className="mb-2">
-                      The app uses the <strong>suncalc</strong> library for
-                      accurate sunrise/sunset and{" "}
-                      <strong>@fusionstrings/panchangam</strong> (Swiss
-                      Ephemeris via Wasm) for Hindu calendar calculations.
+                      {tHtml("settings.aboutTech")}
                     </p>
                     <p className="notebook-note">
-                      Version 1.0 · Notebook Edition · Built with React +
-                      Convex + shadcn/ui
+                      {t("settings.aboutVersion")}
                     </p>
                   </div>
                 </div>
