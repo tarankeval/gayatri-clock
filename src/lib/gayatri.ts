@@ -891,6 +891,7 @@ export async function calcGayatriTimesForRange(
   lat: number,
   lng: number,
   numDays: number,
+  locale: string = "en-US",
 ): Promise<DaySchedule[]> {
   const now = new Date();
   const today = new Date(now);
@@ -910,8 +911,8 @@ export async function calcGayatriTimesForRange(
 
       days.push({
         date: day,
-        weekday: day.toLocaleDateString("en-US", { weekday: "short" }),
-        dateStr: day.toLocaleDateString("en-US", {
+        weekday: day.toLocaleDateString(locale, { weekday: "short" }),
+        dateStr: day.toLocaleDateString(locale, {
           month: "short",
           day: "numeric",
         }),
@@ -1059,18 +1060,20 @@ export function generateShareText(
   times: GayatriTimes,
   locationName: string,
   panchang: Panchang | null,
+  locale: string = "en-US",
 ): string {
   const lines: string[] = [];
+  const now = times.now;
   lines.push("🕉 Gayatri Time — Today");
   lines.push("");
   lines.push(`📍 ${locationName}`);
-  lines.push(`📅 ${times.now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`);
+  lines.push(`📅 ${now.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`);
   lines.push("");
-  lines.push(`🌅 Sunrise: ${formatTime(times.sunrise)}`);
-  lines.push(`🌇 Sunset: ${formatTime(times.sunset)}`);
+  lines.push(`🌅 Sunrise: ${formatTime(times.sunrise, locale)}`);
+  lines.push(`🌇 Sunset: ${formatTime(times.sunset, locale)}`);
   lines.push("");
-  lines.push(`🕉 Brahma Muhurta: ${formatTime(times.brahmaMuhurtaStart)} — ${formatTime(times.brahmaMuhurtaEnd)}`);
-  lines.push(`☀ Gayatri Muhurta: ${formatTime(times.gayatriMuhurtaStart)} — ${formatTime(times.gayatriMuhurtaEnd)}`);
+  lines.push(`🕉 Brahma Muhurta: ${formatTime(times.brahmaMuhurtaStart, locale)} — ${formatTime(times.brahmaMuhurtaEnd, locale)}`);
+  lines.push(`☀ Gayatri Muhurta: ${formatTime(times.gayatriMuhurtaStart, locale)} — ${formatTime(times.gayatriMuhurtaEnd, locale)}`);
   lines.push(`⏱ Muhurta length: ${times.muhurtaLengthMinutes.toFixed(1)} min`);
   lines.push("");
   if (panchang) {

@@ -424,7 +424,7 @@ function CountdownDisplay({
         )}
 
         <span className="text-muted-foreground text-xs font-[var(--notebook-font)]">
-          {t("countdown.next")}: {times.nextEvent === "gayatri" ? t("timeBlocks.gayatri").replace(" (Savitur)", "") : times.nextEvent === "brahma" ? t("timeBlocks.brahma") : t("timeBlocks.sunrise")} {t("countdown.at")}{" "}
+          {t("countdown.next")}: {times.nextEvent === "gayatri" ? t("timeBlocks.gayatriShort") : times.nextEvent === "brahma" ? t("timeBlocks.brahma") : t("timeBlocks.sunrise")} {t("countdown.at")}{" "}
           {times.nextEventTime ? formatTime(times.nextEventTime, dateLocale) : "—"}
         </span>
       </div>
@@ -657,7 +657,7 @@ function ScheduleView({ lat, lng, dateLocale = "en-US" }: { lat: number; lng: nu
     let cancelled = false;
     const timeout = setTimeout(async () => {
       try {
-        const days = await calcGayatriTimesForRange(lat, lng, viewMode);
+        const days = await calcGayatriTimesForRange(lat, lng, viewMode, dateLocale);
         if (!cancelled) setSchedule(days);
       } catch {
         if (!cancelled) setSchedule([]);
@@ -1094,14 +1094,14 @@ export default function Landing() {
 
   const handleShare = async () => {
     if (!times || !location) return;
-    const text = generateShareText(times, location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`, panchang);
+    const text = generateShareText(times, location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`, panchang, dateLocale);
     await shareOrCopy(text, "Gayatri Time — Today");
   };
 
   const handleExportICS = async () => {
     if (!location) return;
     // Fetch schedule for 30 days and export as .ics
-    const days = await calcGayatriTimesForRange(location.lat, location.lng, 30);
+    const days = await calcGayatriTimesForRange(location.lat, location.lng, 30, dateLocale);
     const ics = generateCalendarICS(days, location.name || "My Location");
     downloadFile(ics, "gayatri-times.ics", "text/calendar;charset=utf-8");
   };
@@ -1420,10 +1420,10 @@ export default function Landing() {
                     {tHtml("about.p1", { count: "30" })}
                   </p>
                   <p>
-                    {tHtml("about.p2", { minutes: times.muhurtaLengthMinutes.toFixed(1) })}
+                    {tHtml("about.p2", { strongStart: "<strong>", strongEnd: "</strong>", minutes: times.muhurtaLengthMinutes.toFixed(1) })}
                   </p>
                   <p>
-                    {tHtml("about.p3")}
+                    {tHtml("about.p3", { strongStart: "<strong>", strongEnd: "</strong>" })}
                   </p>
                 </div>
               </motion.div>
@@ -1656,7 +1656,7 @@ export default function Landing() {
                       {t("settings.aboutDesc")}
                     </p>
                     <p className="mb-2">
-                      {tHtml("settings.aboutTech")}
+                      {tHtml("settings.aboutTech", { strongStart: "<strong>", strongEnd: "</strong>" })}
                     </p>
                     <p className="notebook-note">
                       {t("settings.aboutVersion")}
