@@ -621,6 +621,56 @@ export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
   return calcPanchangSimple(date, lat, lng);
 }
 
+// ─── Location Persistence ──────────────────────────────────────────────
+
+const STORAGE_KEY = "gayatri-time-location";
+
+/**
+ * Save the user's location to localStorage so it persists across sessions.
+ */
+export function saveLocation(loc: LocationInfo): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
+  } catch {
+    // Storage may be full or unavailable — silently ignore
+  }
+}
+
+/**
+ * Load a previously saved location from localStorage.
+ */
+export function loadLocation(): LocationInfo | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LocationInfo;
+    if (
+      typeof parsed.lat === "number" &&
+      typeof parsed.lng === "number" &&
+      parsed.lat >= -90 &&
+      parsed.lat <= 90 &&
+      parsed.lng >= -180 &&
+      parsed.lng <= 180
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear the saved location from localStorage.
+ */
+export function clearLocation(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 // ─── Location ──────────────────────────────────────────────────────────
 
 /**

@@ -17,6 +17,7 @@ import {
   Compass,
   Sparkles,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -38,6 +39,9 @@ import {
   formatTime,
   getCurrentLocation,
   getLocationName,
+  saveLocation,
+  loadLocation,
+  clearLocation,
   playGayatriChime,
   playTestChime,
 } from "@/lib/gayatri";
@@ -404,9 +408,11 @@ function CountdownDisplay({
 function LocationPicker({
   location,
   onLocationChange,
+  onClearSaved,
 }: {
   location: LocationInfo;
   onLocationChange: (loc: LocationInfo) => void;
+  onClearSaved?: () => void;
 }) {
   const [latInput, setLatInput] = useState(location.lat.toString());
   const [lngInput, setLngInput] = useState(location.lng.toString());
@@ -495,23 +501,35 @@ function LocationPicker({
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium font-[var(--notebook-font)]">
-              {location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`}
+        <div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium font-[var(--notebook-font)]">
+                {location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`}
+              </div>
+              <div className="notebook-note">
+                {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
+              </div>
             </div>
-            <div className="notebook-note">
-              {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsEditing(true)}
+                className="h-8 text-xs font-[var(--notebook-font)]"
+              >
+                Change
+              </Button>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setIsEditing(true)}
-            className="h-8 text-xs font-[var(--notebook-font)]"
-          >
-            Change
-          </Button>
+          {onClearSaved && (
+            <button
+              onClick={onClearSaved}
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors mt-1 font-[var(--notebook-font)]"
+            >
+              Clear saved location
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -685,10 +703,65 @@ export default function Landing() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const notificationSentRef = useRef(false);
   const audioAlarmSentRef = useRef(false);
+  const deferredPromptRef = useRef<Event | null>(null);
+  const [installPromptAvailable, setInstallPromptAvailable] = useState(false);
+
+  // ── PWA Install Prompt ─────────────────────────────────────────
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      deferredPromptRef.current = e;
+      setInstallPromptAvailable(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPromptRef.current) return;
+    const promptEvent = deferredPromptRef.current as any;
+    promptEvent.prompt();
+    const result = await promptEvent.userChoice;
+    if (result.outcome === "accepted") {
+      setInstallPromptAvailable(false);
+      deferredPromptRef.current = null;
+    }
+  };
+
+  // ── Service Worker Registration ─────────────────────────────────
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .catch(() => {
+          // Service worker registration failed — not critical
+        });
+    }
+  }, []);
 
   // ── Initialize location ──────────────────────────────────────────
 
   const initLocation = useCallback(async () => {
+    // Try to load a saved location first
+    const saved = loadLocation();
+    if (saved) {
+      setLocation(saved);
+      setAppState("ready");
+      // Refresh the location name in the background
+      getLocationName(saved.lat, saved.lng)
+        .then((name) => {
+          if (name) {
+            setLocation((prev) =>
+              prev ? { ...prev, name } : prev,
+            );
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
     setAppState("loading");
     try {
       const pos = await getCurrentLocation();
@@ -702,6 +775,7 @@ export default function Landing() {
         name,
       };
       setLocation(loc);
+      saveLocation(loc);
       setAppState("ready");
     } catch {
       setAppState("location-prompt");
@@ -734,14 +808,37 @@ export default function Landing() {
     }
   }, [location, calculate]);
 
-  // ── Refresh every 10 seconds ────────────────────────────────────
+  // ── Adaptive refresh (10s visible / 60s hidden) ─────────────────
 
   useEffect(() => {
     if (!location) return;
-    const interval = setInterval(() => {
-      calculate(location);
-    }, 10000);
-    return () => clearInterval(interval);
+
+    const REFRESH_VISIBLE = 10000;
+    const REFRESH_HIDDEN = 60000;
+
+    const tick = () => calculate(location);
+
+    let interval: ReturnType<typeof setInterval>;
+
+    const startInterval = (ms: number) => {
+      clearInterval(interval);
+      interval = setInterval(tick, ms);
+    };
+
+    const handleVisibility = () => {
+      startInterval(
+        document.hidden ? REFRESH_HIDDEN : REFRESH_VISIBLE,
+      );
+    };
+
+    // Start with visible interval
+    interval = setInterval(tick, REFRESH_VISIBLE);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [location, calculate]);
 
   // ── Notifications ───────────────────────────────────────────────
@@ -823,7 +920,14 @@ export default function Landing() {
 
   const handleLocationChange = (loc: LocationInfo) => {
     setLocation(loc);
+    saveLocation(loc);
     setAppState("ready");
+  };
+
+  const handleClearSavedLocation = () => {
+    clearLocation();
+    setLocation(null);
+    setAppState("location-prompt");
   };
 
   // ── Set default location ───────────────────────────────────────
@@ -867,20 +971,32 @@ export default function Landing() {
                   })}
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="h-8 w-8 p-0"
-              >
-                <RefreshCw
-                  className={cn(
-                    "w-4 h-4",
-                    isRefreshing && "animate-spin",
-                  )}
-                />
-              </Button>
+              <div className="flex items-center gap-2">
+                {installPromptAvailable && (
+                  <button
+                    onClick={handleInstall}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
+                    title="Install app"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Install</span>
+                  </button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="h-8 w-8 p-0"
+                >
+                  <RefreshCw
+                    className={cn(
+                      "w-4 h-4",
+                      isRefreshing && "animate-spin",
+                    )}
+                  />
+                </Button>
+              </div>
             </div>
             <div className="notebook-annotation mt-3">
               The intersection of three sacred conditions — the final Muhurta
@@ -976,6 +1092,7 @@ export default function Landing() {
                   <LocationPicker
                     location={location}
                     onLocationChange={handleLocationChange}
+                    onClearSaved={handleClearSavedLocation}
                   />
                 </motion.div>
               )}
