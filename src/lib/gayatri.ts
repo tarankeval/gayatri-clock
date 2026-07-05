@@ -621,6 +621,36 @@ export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
   return calcPanchangSimple(date, lat, lng);
 }
 
+// ─── Theme Persistence ──────────────────────────────────────────────────
+
+const THEME_STORAGE_KEY = "gayatri-time-theme";
+
+export type ThemeMode = "light" | "sepia" | "dark";
+
+/**
+ * Save the theme preference to localStorage.
+ */
+export function saveTheme(theme: ThemeMode): void {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Load a previously saved theme preference from localStorage.
+ */
+export function loadTheme(): ThemeMode {
+  try {
+    const raw = localStorage.getItem(THEME_STORAGE_KEY);
+    if (raw === "light" || raw === "sepia" || raw === "dark") return raw;
+  } catch {
+    // ignore
+  }
+  return "light";
+}
+
 // ─── Location Persistence ──────────────────────────────────────────────
 
 const STORAGE_KEY = "gayatri-time-location";
@@ -715,6 +745,45 @@ export async function getLocationName(
     );
   } catch {
     return `${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
+  }
+}
+
+/**
+ * Search for a city by name using Nominatim's search API.
+ * Returns matching locations with lat/lng and display names.
+ */
+export interface CitySearchResult {
+  lat: number;
+  lng: number;
+  name: string;
+  displayName: string;
+  country: string;
+  type: string;
+}
+
+export async function searchCity(
+  query: string,
+): Promise<CitySearchResult[]> {
+  if (!query || query.trim().length < 2) return [];
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query.trim())}&limit=5&addressdetails=1`,
+      {
+        headers: { "User-Agent": "GayatriTimeApp/1.0" },
+      },
+    );
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((item: any) => ({
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+      name: item.address?.city || item.address?.town || item.address?.village || item.display_name?.split(",")[0] || item.display_name || "Unknown",
+      displayName: item.display_name || "",
+      country: item.address?.country || "",
+      type: item.type || "",
+    }));
+  } catch {
+    return [];
   }
 }
 

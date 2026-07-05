@@ -85,32 +85,61 @@
   --notebook-font: "Georgia", "Palatino Linotype", "Book Antiqua", serif;
 }
 
-.dark {
-  --background: oklch(0.18 0.01 60);    /* dark paper */
-  --foreground: oklch(0.9 0.01 70);     /* light ink */
-  --card: oklch(0.2 0.015 60);
-  --card-foreground: oklch(0.9 0.01 70);
-  --popover: oklch(0.2 0.015 60);
-  --popover-foreground: oklch(0.9 0.01 70);
-  --primary: oklch(0.9 0.01 70);
-  --primary-foreground: oklch(0.18 0.01 60);
-  --secondary: oklch(0.25 0.015 60);
-  --secondary-foreground: oklch(0.9 0.01 70);
-  --muted: oklch(0.25 0.01 60);
-  --muted-foreground: oklch(0.65 0.01 60);
-  --accent: oklch(0.3 0.03 50);
-  --accent-foreground: oklch(0.9 0.01 70);
-  --destructive: oklch(0.6 0.15 25);
-  --border: oklch(0.3 0.01 60);
-  --input: oklch(0.28 0.01 60);
-  --ring: oklch(0.45 0.01 60);
-  --sidebar: oklch(0.2 0.015 60);
-  --sidebar-foreground: oklch(0.9 0.01 70);
+.dark,
+[data-theme="dark"] {
+  --background: oklch(0.13 0.012 45);    /* dark vintage paper */
+  --foreground: oklch(0.88 0.015 55);    /* warm light ink */
+  --card: oklch(0.16 0.015 45);
+  --card-foreground: oklch(0.88 0.015 55);
+  --popover: oklch(0.16 0.015 45);
+  --popover-foreground: oklch(0.88 0.015 55);
+  --primary: oklch(0.88 0.015 55);
+  --primary-foreground: oklch(0.13 0.012 45);
+  --secondary: oklch(0.2 0.015 45);
+  --secondary-foreground: oklch(0.88 0.015 55);
+  --muted: oklch(0.2 0.012 45);
+  --muted-foreground: oklch(0.55 0.015 50);
+  --accent: oklch(0.25 0.025 40);
+  --accent-foreground: oklch(0.88 0.015 55);
+  --destructive: oklch(0.55 0.15 25);
+  --border: oklch(0.25 0.015 45);
+  --input: oklch(0.22 0.015 45);
+  --ring: oklch(0.4 0.015 50);
+  --sidebar: oklch(0.16 0.015 45);
+  --sidebar-foreground: oklch(0.88 0.015 55);
 
-  --notebook-line-color: oklch(0.35 0.01 60 / 0.3);
-  --notebook-margin-color: oklch(0.5 0.06 25 / 0.3);
-  --notebook-annotation-bg: oklch(0.35 0.03 50 / 0.25);
-  --notebook-highlight: oklch(0.4 0.05 50 / 0.2);
+  --notebook-line-color: oklch(0.35 0.012 45 / 0.3);
+  --notebook-margin-color: oklch(0.5 0.06 25 / 0.25);
+  --notebook-annotation-bg: oklch(0.3 0.03 40 / 0.25);
+  --notebook-highlight: oklch(0.35 0.04 40 / 0.2);
+}
+
+[data-theme="sepia"] {
+  --background: oklch(0.92 0.025 70);    /* warm sepia paper */
+  --foreground: oklch(0.25 0.03 45);     /* brown ink */
+  --card: oklch(0.90 0.025 70);
+  --card-foreground: oklch(0.25 0.03 45);
+  --popover: oklch(0.92 0.025 70);
+  --popover-foreground: oklch(0.25 0.03 45);
+  --primary: oklch(0.18 0.04 40);
+  --primary-foreground: oklch(0.92 0.025 70);
+  --secondary: oklch(0.87 0.025 65);
+  --secondary-foreground: oklch(0.25 0.03 45);
+  --muted: oklch(0.88 0.02 65);
+  --muted-foreground: oklch(0.55 0.04 45);
+  --accent: oklch(0.82 0.05 60);
+  --accent-foreground: oklch(0.25 0.03 45);
+  --destructive: oklch(0.55 0.15 25);
+  --border: oklch(0.78 0.03 60);
+  --input: oklch(0.85 0.025 65);
+  --ring: oklch(0.65 0.04 50);
+  --sidebar: oklch(0.90 0.025 70);
+  --sidebar-foreground: oklch(0.25 0.03 45);
+
+  --notebook-line-color: oklch(0.75 0.03 60 / 0.4);
+  --notebook-margin-color: oklch(0.65 0.08 25 / 0.35);
+  --notebook-annotation-bg: oklch(0.85 0.06 55 / 0.25);
+  --notebook-highlight: oklch(0.8 0.08 50 / 0.2);
 }
 
 @layer base {

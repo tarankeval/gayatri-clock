@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import {
   Sun,
   Moon,
-  Sunrise,
-  Sunset,
+  Sunrise as SunriseIcon,
+  Sunset as SunsetIcon,
   MapPin,
   Bell,
   BellOff,
@@ -18,12 +18,13 @@ import {
   Sparkles,
   AlertTriangle,
   Download,
+  Search,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
@@ -31,17 +32,21 @@ import {
   type LocationInfo,
   type Panchang,
   type DaySchedule,
+  type ThemeMode,
+  type CitySearchResult,
   calcGayatriTimes,
   calcGayatriTimesForRange,
   calcPanchang,
-  calcPanchangAsync,
   formatCountdown,
   formatTime,
   getCurrentLocation,
   getLocationName,
+  searchCity,
   saveLocation,
   loadLocation,
   clearLocation,
+  saveTheme,
+  loadTheme,
   playGayatriChime,
   playTestChime,
 } from "@/lib/gayatri";
@@ -417,6 +422,10 @@ function LocationPicker({
   const [latInput, setLatInput] = useState(location.lat.toString());
   const [lngInput, setLngInput] = useState(location.lng.toString());
   const [isEditing, setIsEditing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<CitySearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleApply = () => {
     const lat = parseFloat(latInput);
@@ -444,6 +453,34 @@ function LocationPicker({
     }
   };
 
+  const handleSearchInput = (value: string) => {
+    setSearchQuery(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (value.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      const results = await searchCity(value);
+      setSearchResults(results);
+      setIsSearching(false);
+    }, 400);
+  };
+
+  const handleSelectCity = (result: CitySearchResult) => {
+    onLocationChange({
+      lat: result.lat,
+      lng: result.lng,
+      name: result.name,
+    });
+    setSearchQuery("");
+    setSearchResults([]);
+    setLatInput(result.lat.toString());
+    setLngInput(result.lng.toString());
+    setIsEditing(false);
+  };
+
   return (
     <div className="notebook-card">
       <div className="flex items-center gap-2 mb-3">
@@ -452,34 +489,79 @@ function LocationPicker({
       </div>
 
       {isEditing ? (
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label className="notebook-note">Latitude</Label>
+        <div className="space-y-3">
+          {/* City search */}
+          <div>
+            <Label className="notebook-note">Search for a city</Label>
+            <div className="relative mt-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
-                value={latInput}
-                onChange={(e) => setLatInput(e.target.value)}
-                placeholder="e.g. 27.1751"
-                className="h-8 text-sm font-[var(--notebook-font)]"
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                placeholder="e.g. Varanasi, Delhi, Moscow..."
+                className="h-9 pl-8 text-sm font-[var(--notebook-font)]"
               />
             </div>
-            <div className="flex-1">
-              <Label className="notebook-note">Longitude</Label>
-              <Input
-                value={lngInput}
-                onChange={(e) => setLngInput(e.target.value)}
-                placeholder="e.g. 78.0421"
-                className="h-8 text-sm font-[var(--notebook-font)]"
-              />
+            {isSearching && (
+              <div className="text-xs text-muted-foreground mt-1 italic font-[var(--notebook-font)]">
+                Searching...
+              </div>
+            )}
+            {searchResults.length > 0 && (
+              <div className="mt-1 rounded-sm border border-border overflow-hidden">
+                {searchResults.map((result, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectCity(result)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-[oklch(0.65_0.12_50_/_0.06)] transition-colors border-b border-border last:border-b-0 font-[var(--notebook-font)]"
+                  >
+                    <div className="font-medium">{result.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {result.country}
+                      <span className="mx-1">·</span>
+                      {result.lat.toFixed(4)}°N, {result.lng.toFixed(4)}°E
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Manual coordinate entry */}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="notebook-note">Or enter coordinates</span>
+              <span className="flex-1 border-t border-dashed border-border" />
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label className="notebook-note">Latitude</Label>
+                <Input
+                  value={latInput}
+                  onChange={(e) => setLatInput(e.target.value)}
+                  placeholder="e.g. 27.1751"
+                  className="h-8 text-sm font-[var(--notebook-font)]"
+                />
+              </div>
+              <div className="flex-1">
+                <Label className="notebook-note">Longitude</Label>
+                <Input
+                  value={lngInput}
+                  onChange={(e) => setLngInput(e.target.value)}
+                  placeholder="e.g. 78.0421"
+                  className="h-8 text-sm font-[var(--notebook-font)]"
+                />
+              </div>
             </div>
           </div>
+
           <div className="flex gap-2">
             <Button
               size="sm"
               onClick={handleApply}
               className="h-8 text-xs font-[var(--notebook-font)]"
             >
-              Apply
+              Apply Coordinates
             </Button>
             <Button
               size="sm"
@@ -705,6 +787,34 @@ export default function Landing() {
   const audioAlarmSentRef = useRef(false);
   const deferredPromptRef = useRef<Event | null>(null);
   const [installPromptAvailable, setInstallPromptAvailable] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>(() => loadTheme());
+
+  // ── Theme management ────────────────────────────────────────────
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    saveTheme(theme);
+  }, [theme]);
+
+  const cycleTheme = () => {
+    setTheme((prev) => {
+      const modes: ThemeMode[] = ["light", "sepia", "dark"];
+      const idx = modes.indexOf(prev);
+      return modes[(idx + 1) % modes.length];
+    });
+  };
+
+  const themeLabel: Record<ThemeMode, string> = {
+    light: "Light",
+    sepia: "Sepia",
+    dark: "Dark",
+  };
+
+  const themeNextIcon: Record<ThemeMode, React.ReactNode> = {
+    light: <Sun className="w-3.5 h-3.5" />,
+    sepia: <Sun className="w-3.5 h-3.5" />,
+    dark: <Moon className="w-3.5 h-3.5" />,
+  };
 
   // ── PWA Install Prompt ─────────────────────────────────────────
 
@@ -982,6 +1092,14 @@ export default function Landing() {
                     <span className="hidden sm:inline">Install</span>
                   </button>
                 )}
+                <button
+                  onClick={cycleTheme}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
+                  title={`Switch to next theme (current: ${themeLabel[theme]})`}
+                >
+                  {themeNextIcon[theme]}
+                  <span className="hidden sm:inline capitalize">{theme}</span>
+                </button>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -1157,13 +1275,12 @@ export default function Landing() {
                 />
                 <TimeBlock
                   label="Sunrise"
-                  time={formatTime(times.sunrise)}
-                  icon={Sunrise}
-                />
+                  time={formatTime(times.sunrise)}                icon={SunriseIcon}
+              />
                 <TimeBlock
                   label="Sunset"
                   time={formatTime(times.sunset)}
-                  icon={Sunset}
+                  icon={SunsetIcon}
                 />
               </motion.div>
 
