@@ -33,6 +33,7 @@ import {
   calcGayatriTimes,
   calcGayatriTimesForRange,
   calcPanchang,
+  calcPanchangAsync,
   formatCountdown,
   formatTime,
   getCurrentLocation,
@@ -527,17 +528,20 @@ function ScheduleView({ lat, lng }: { lat: number; lng: number }) {
   // Compute schedule whenever location or view mode changes
   useEffect(() => {
     setIsLoading(true);
-    // Use a small delay so rapid toggles batch
-    const timeout = setTimeout(() => {
+    let cancelled = false;
+    const timeout = setTimeout(async () => {
       try {
-        const days = calcGayatriTimesForRange(lat, lng, viewMode);
-        setSchedule(days);
+        const days = await calcGayatriTimesForRange(lat, lng, viewMode);
+        if (!cancelled) setSchedule(days);
       } catch {
-        setSchedule([]);
+        if (!cancelled) setSchedule([]);
       }
-      setIsLoading(false);
+      if (!cancelled) setIsLoading(false);
     }, 50);
-    return () => clearTimeout(timeout);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [lat, lng, viewMode]);
 
   return (

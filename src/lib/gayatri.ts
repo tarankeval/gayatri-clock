@@ -419,22 +419,136 @@ export function calcGayatriTimes(lat: number, lng: number): GayatriTimes {
 
 // ─── Panchang (Hindu Calendar) Calculations ─────────────────────────────
 
+// Lazy-loaded wasm panchangam library for high-precision calculations
+let _panchangamModule: typeof import("@fusionstrings/panchangam") | null = null;
+let _panchangamLoadAttempted = false;
+
+async function loadPanchangam(): Promise<typeof import("@fusionstrings/panchangam") | null> {
+  if (_panchangamModule) return _panchangamModule;
+  if (_panchangamLoadAttempted) return null;
+  _panchangamLoadAttempted = true;
+  try {
+    // Dynamic import — may fail in some browser/Vite setups due to Wasm loading
+    const mod = await import("@fusionstrings/panchangam");
+    _panchangamModule = mod;
+    return mod;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Calculate the Hindu calendar elements (Panchang) for a given date and location.
+ * Uses Swiss Ephemeris via @fusionstrings/panchangam when available, with
+ * graceful fallback to our simplified calculations.
  */
-export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
+export async function calcPanchangAsync(
+  date: Date,
+  lat: number,
+  lng: number,
+): Promise<Panchang> {
+  const mod = await loadPanchangam();
+  if (mod) {
+    try {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      // Use the Location class from the library
+      const loc = new mod.Location(lat, lng, 0);
+      try {
+        // Mode 1 = Lahiri (standard Chitrapaksha Ayanamsa)
+        const result = mod.calculate_daily_panchang(year, month, day, loc, 1);
+
+        // Tithi: index is 1-30, 15 = Purnima, 30 = Amavasya
+        const tithiIdx = result.tithi_index; // 1-30
+
+        const tithi: Tithi = {
+          index: tithiIdx - 1,
+          name: result.tithi_name.replace("Shukla-", "").replace("Krishna-", ""),
+          paksha: tithiIdx <= 15 ? "Shukla" : "Krishna",
+          day: tithiIdx <= 15 ? tithiIdx : tithiIdx - 15,
+        };
+
+        // Nakshatra: index is 1-27
+        const nakshatraIdx = result.nakshatra_index - 1;
+        const nakshatraData = NAKSHATRA_NAMES[nakshatraIdx] || {
+          name: result.nakshatra_name,
+          deity: "",
+          symbol: "",
+        };
+
+        const nakshatra: Nakshatra = {
+          index: nakshatraIdx,
+          name: result.nakshatra_name,
+          deity: nakshatraData.deity,
+          symbol: nakshatraData.symbol,
+        };
+
+        // Yoga: index is 1-27
+        const yoga: Yoga = {
+          index: result.yoga_index - 1,
+          name: result.yoga_name,
+        };
+
+        // Karana: use the library's name directly; index is best-effort
+        const karana: Karana = {
+          index: KARANA_NAMES.indexOf(result.karana_name) >= 0
+            ? KARANA_NAMES.indexOf(result.karana_name)
+            : 0,
+          name: result.karana_name,
+        };
+
+        // Hindu month from Sun longitude (approximation)
+        const jdLocal = toJulian(date);
+        const sunLong = calcSunLongitude(jdLocal);
+        const solarMonthIndex = Math.floor(
+          (((sunLong - 23.5) % 360) + 360) % 360 / 30,
+        );
+        const hinduMonth = HINDU_MONTHS[solarMonthIndex % 12];
+
+        const gregYear = date.getFullYear();
+        const samvatYear = `${gregYear + 57}`;
+
+        const resultObj = {
+          tithi,
+          nakshatra,
+          yoga,
+          karana,
+          hinduMonth,
+          hinduYear: `${gregYear}`,
+          samvatYear: `Vikram Samvat ${samvatYear}`,
+          ayanamsa: `Lahiri (Swiss Eph) — ${result.ayanamsha_value.toFixed(4)}°`,
+        };
+
+        result.free();
+        return resultObj;
+      } finally {
+        loc.free();
+      }
+    } catch {
+      // Fall through to simplified calculation
+    }
+  }
+
+  return calcPanchangSimple(date, lat, lng);
+}
+
+/**
+ * Simplified Panchang calculation (fallback when Wasm library is unavailable).
+ */
+export function calcPanchangSimple(
+  date: Date,
+  lat: number,
+  lng: number,
+): Panchang {
   const jd = toJulian(date);
 
-  // Get sunrise for the given date
   const sunrise = calcSunrise(lat, lng, date);
   const sunriseJD = sunrise ? toJulian(sunrise) : jd;
 
-  // Calculate positions at sunrise (traditional Panchang is calculated at sunrise)
   const sunLong = calcSunLongitude(sunriseJD);
   const moonLong = calcMoonLongitude(sunriseJD);
 
-  // --- Tithi ---
-  // Tithi = (Moon longitude - Sun longitude) / 12
   let diff = moonLong - sunLong;
   if (diff < 0) diff += 360;
   const tithiIndex = Math.floor(diff / 12);
@@ -447,8 +561,6 @@ export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
     day: clampedIndex < 15 ? clampedIndex + 1 : clampedIndex - 14,
   };
 
-  // --- Nakshatra ---
-  // 27 Nakshatras of 13°20' each
   const nakshatraIndex = Math.floor(moonLong / 13.333333);
   const nIndex = Math.max(0, Math.min(26, nakshatraIndex));
   const nakshatraData = NAKSHATRA_NAMES[nIndex];
@@ -460,8 +572,6 @@ export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
     symbol: nakshatraData.symbol,
   };
 
-  // --- Yoga ---
-  // Yoga = (Sun longitude + Moon longitude) / 13°20'
   let sum = sunLong + moonLong;
   sum = sum % 360;
   const yogaIndex = Math.floor(sum / 13.333333);
@@ -472,40 +582,24 @@ export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
     name: YOGA_NAMES[yIndex],
   };
 
-  // --- Karana ---
-  // Half a tithi. The first 7 karanas repeat 8 times (covering 56 half-tithis),
-  // and the last 4 are fixed (covering the remaining 4 half-tithis)
-  // There are 60 karanas in a lunar month (30 tithis × 2)
-  // We use the tithi index and the phase within it
-  // For simplicity: 7 recurring karanas cycle through the first 56 half-tithis,
-  // then the 4 fixed karanas cover the last 4
-  const halfTithiIndex = tithiIndex * 2; // Simplified: first half of the tithi
+  const halfTithiIndex = tithiIndex * 2;
   const karanaIdx = halfTithiIndex % 7 < 7
     ? halfTithiIndex % 7
     : (halfTithiIndex >= 56 ? (halfTithiIndex - 56) + 7 : halfTithiIndex % 7);
-
   const kIndex = Math.max(0, Math.min(10, karanaIdx));
+
   const karana: Karana = {
     index: kIndex,
     name: KARANA_NAMES[kIndex],
   };
 
-  // --- Hindu Month ---
-  // Approximate: based on solar month (Sun's position in sidereal zodiac)
-  // Sun enters each rasi (sign) at ~30° intervals
-  // This is a simplified approximation
   const solarMonthIndex = Math.floor(
     (((sunLong - 23.5) % 360) + 360) % 360 / 30,
   );
   const hinduMonth = HINDU_MONTHS[solarMonthIndex % 12];
 
-  // --- Hindu Year ---
-  // Vikram Samvat starts in Chaitra (March-April)
-  // Current VS year ≈ Gregorian year + 56-57
   const gregYear = date.getFullYear();
-  const isAfterChaitra = solarMonthIndex >= 0; // Simplified
-  const samvatYear = `${gregYear + 57}`; // Vikram Samvat
-  const hinduYear = `${gregYear}`;
+  const samvatYear = `${gregYear + 57}`;
 
   return {
     tithi,
@@ -513,10 +607,18 @@ export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
     yoga,
     karana,
     hinduMonth,
-    hinduYear,
+    hinduYear: `${gregYear}`,
     samvatYear: `Vikram Samvat ${samvatYear}`,
-    ayanamsa: "Lahiri (Chitrapaksha)",
+    ayanamsa: "Lahiri (simplified)",
   };
+}
+
+/**
+ * Calculate the Hindu calendar elements (Panchang) for a given date and location.
+ * Synchronous version that uses the simplified calculation.
+ */
+export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
+  return calcPanchangSimple(date, lat, lng);
 }
 
 // ─── Location ──────────────────────────────────────────────────────────
@@ -664,12 +766,13 @@ export function calcGayatriTimesForDate(
 
 /**
  * Calculate Gayatri times and Panchang for a range of upcoming days.
+ * Uses the Swiss Ephemeris library for accurate Panchang when available.
  */
-export function calcGayatriTimesForRange(
+export async function calcGayatriTimesForRange(
   lat: number,
   lng: number,
   numDays: number,
-): DaySchedule[] {
+): Promise<DaySchedule[]> {
   const now = new Date();
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -683,7 +786,8 @@ export function calcGayatriTimesForRange(
 
     try {
       const times = calcGayatriTimesForDate(lat, lng, day);
-      const panch = calcPanchang(day, lat, lng);
+      // Try async panchang (Swiss Eph) first; fallback is handled internally
+      const panch = await calcPanchangAsync(day, lat, lng);
 
       days.push({
         date: day,
