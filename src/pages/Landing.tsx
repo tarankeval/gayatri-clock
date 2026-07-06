@@ -340,16 +340,16 @@ function CountdownDisplay({
 
       <div
         className={cn(
-          "text-4xl font-bold font-[var(--notebook-font)] tracking-tight transition-all duration-500 py-2",
-          isActive && "gayatri-active text-5xl",
+          "max-w-full break-words text-3xl sm:text-4xl font-bold font-[var(--notebook-font)] tracking-tight transition-all duration-500 py-2",
+          isActive && "gayatri-active text-3xl sm:text-5xl",
           isSoon && !isActive && "text-[oklch(0.6_0.12_50)]",
         )}
       >
         {isActive ? (
-          <span className="inline-flex items-center gap-2">
-            <Sparkles className="w-8 h-8" />
+          <span className="inline-flex max-w-full flex-wrap items-center justify-center gap-2">
+            <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
             {display}
-            <Sparkles className="w-8 h-8" />
+            <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
           </span>
         ) : (
           display
@@ -838,12 +838,6 @@ export default function Landing() {
     });
   };
 
-  const themeLabel: Record<ThemeMode, string> = {
-    light: "Light",
-    sepia: "Sepia",
-    dark: "Dark",
-  };
-
   const themeNextIcon: Record<ThemeMode, React.ReactNode> = {
     light: <Sun className="w-3.5 h-3.5" />,
     sepia: <Sun className="w-3.5 h-3.5" />,
@@ -1260,11 +1254,11 @@ export default function Landing() {
             transition={{ duration: 0.5 }}
             className="notebook-header"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="notebook-title flex items-center gap-3">
-                  <Sun className="w-7 h-7 text-[oklch(0.65_0.12_50)]" />
-                  {t("app.title")}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h1 className="notebook-title flex items-center gap-3 text-2xl sm:text-3xl">
+                  <Sun className="w-7 h-7 flex-shrink-0 text-[oklch(0.65_0.12_50)]" />
+                  <span className="min-w-0 break-words">{t("app.title")}</span>
                 </h1>
                 <div className="notebook-date mt-1">
                   {new Date().toLocaleDateString(dateLocale, {
@@ -1275,7 +1269,7 @@ export default function Landing() {
                   })}
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-shrink-0 items-center justify-end gap-1 self-end sm:self-start">
                 {installPromptAvailable && (
                   <button
                     type="button"
@@ -1372,12 +1366,13 @@ export default function Landing() {
               <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto font-[var(--notebook-font)]">
                 {t("locationPrompt.description")}
               </p>
-              <div className="flex gap-3 justify-center">
-                <Button onClick={initLocation} className="font-[var(--notebook-font)]">
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Button type="button" onClick={initLocation} className="font-[var(--notebook-font)]">
                   <MapPin className="w-4 h-4 mr-2" />
                   {t("locationPrompt.useMyLocation")}
                 </Button>
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={handleUseDefaultLocation}
                   className="font-[var(--notebook-font)]"
@@ -1404,7 +1399,7 @@ export default function Landing() {
               <p className="text-sm text-muted-foreground mb-4 font-[var(--notebook-font)]">
                 {errorMessage}
               </p>
-              <Button onClick={handleRefresh} className="font-[var(--notebook-font)]">
+              <Button type="button" onClick={handleRefresh} className="font-[var(--notebook-font)]">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 {t("error.retry")}
               </Button>

@@ -231,7 +231,7 @@
 .notebook-title {
   font-family: var(--notebook-font);
   @apply text-3xl font-bold tracking-tight;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .notebook-date {
@@ -397,7 +397,13 @@
 .notebook-container {
   @apply mx-auto w-full;
   max-width: 720px;
-  @apply px-6 py-8;
+  padding: max(1.5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
+@media (min-width: 640px) {
+  .notebook-container {
+    padding: max(2rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+  }
 }
 
 /* Divine glow for active Gayatri time */
