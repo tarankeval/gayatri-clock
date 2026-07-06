@@ -22,6 +22,11 @@ export interface LocationInfo {
   name?: string;
 }
 
+export interface SavedLocation extends LocationInfo {
+  id: string;
+  savedAt: string;
+}
+
 export interface GayatriTimes {
   /** Current timestamp */
   now: Date;
@@ -677,6 +682,25 @@ export function loadAudioAlarmEnabled(): boolean {
 // ─── Location Persistence ──────────────────────────────────────────────
 
 const STORAGE_KEY = "gayatri-time-location";
+const SAVED_LOCATIONS_STORAGE_KEY = "gayatri-time-saved-locations";
+
+function isValidLocation(value: unknown): value is LocationInfo {
+  if (!value || typeof value !== "object") return false;
+  const loc = value as LocationInfo;
+  return (
+    typeof loc.lat === "number" &&
+    typeof loc.lng === "number" &&
+    loc.lat >= -90 &&
+    loc.lat <= 90 &&
+    loc.lng >= -180 &&
+    loc.lng <= 180 &&
+    (loc.name === undefined || typeof loc.name === "string")
+  );
+}
+
+function getLocationId(loc: LocationInfo): string {
+  return `${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}`;
+}
 
 /**
  * Save the user's location to localStorage so it persists across sessions.
@@ -696,18 +720,8 @@ export function loadLocation(): LocationInfo | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as LocationInfo;
-    if (
-      typeof parsed.lat === "number" &&
-      typeof parsed.lng === "number" &&
-      parsed.lat >= -90 &&
-      parsed.lat <= 90 &&
-      parsed.lng >= -180 &&
-      parsed.lng <= 180
-    ) {
-      return parsed;
-    }
-    return null;
+    const parsed = JSON.parse(raw);
+    return isValidLocation(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -722,6 +736,77 @@ export function clearLocation(): void {
   } catch {
     // ignore
   }
+}
+
+/**
+ * Load favorite/saved locations from localStorage.
+ */
+export function loadSavedLocations(): SavedLocation[] {
+  try {
+    const raw = localStorage.getItem(SAVED_LOCATIONS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is SavedLocation => {
+      const candidate = item as Partial<SavedLocation>;
+      return (
+        isValidLocation(item) &&
+        typeof candidate.id === "string" &&
+        typeof candidate.savedAt === "string"
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Persist favorite/saved locations.
+ */
+export function saveSavedLocations(locations: SavedLocation[]): void {
+  try {
+    localStorage.setItem(SAVED_LOCATIONS_STORAGE_KEY, JSON.stringify(locations));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Add or update a saved location by rounded coordinates.
+ */
+export function addSavedLocation(
+  locations: SavedLocation[],
+  loc: LocationInfo,
+): SavedLocation[] {
+  const id = getLocationId(loc);
+  const saved: SavedLocation = {
+    ...loc,
+    id,
+    savedAt: new Date().toISOString(),
+  };
+  return [saved, ...locations.filter((item) => item.id !== id)].slice(0, 12);
+}
+
+/**
+ * Remove a saved location.
+ */
+export function removeSavedLocation(
+  locations: SavedLocation[],
+  id: string,
+): SavedLocation[] {
+  return locations.filter((item) => item.id !== id);
+}
+
+/**
+ * Check whether a location is already saved.
+ */
+export function isLocationSaved(
+  locations: SavedLocation[],
+  loc: LocationInfo | null,
+): boolean {
+  if (!loc) return false;
+  const id = getLocationId(loc);
+  return locations.some((item) => item.id === id);
 }
 
 // ─── Location ──────────────────────────────────────────────────────────

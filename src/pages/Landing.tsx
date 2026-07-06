@@ -24,6 +24,8 @@ import {
   SunMoon,
   Info,
   X,
+  Star,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -36,6 +38,7 @@ import { cn } from "@/lib/utils";
 import {
   type GayatriTimes,
   type LocationInfo,
+  type SavedLocation,
   type Panchang,
   type DaySchedule,
   type ThemeMode,
@@ -51,6 +54,11 @@ import {
   saveLocation,
   loadLocation,
   clearLocation,
+  loadSavedLocations,
+  saveSavedLocations,
+  addSavedLocation,
+  removeSavedLocation,
+  isLocationSaved,
   saveTheme,
   loadTheme,
   saveAudioAlarmEnabled,
@@ -435,11 +443,21 @@ function CountdownDisplay({
 
 function LocationPicker({
   location,
+  savedLocations,
+  isCurrentLocationSaved,
   onLocationChange,
+  onSaveCurrent,
+  onSelectSaved,
+  onDeleteSaved,
   onClearSaved,
 }: {
   location: LocationInfo;
+  savedLocations: SavedLocation[];
+  isCurrentLocationSaved: boolean;
   onLocationChange: (loc: LocationInfo) => void;
+  onSaveCurrent: () => void;
+  onSelectSaved: (loc: SavedLocation) => void;
+  onDeleteSaved: (id: string) => void;
   onClearSaved?: () => void;
 }) {
   const { t } = useTranslation();
@@ -608,8 +626,8 @@ function LocationPicker({
         </div>
       ) : (
         <div>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <div className="font-medium font-[var(--notebook-font)]">
                 {location.name || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`}
               </div>
@@ -617,10 +635,30 @@ function LocationPicker({
                 {t("locationPicker.coordsFormat", { lat: location.lat.toFixed(4), lng: location.lng.toFixed(4) })}
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-shrink-0 items-center gap-1">
               <Button
                 size="sm"
                 variant="ghost"
+                type="button"
+                onClick={onSaveCurrent}
+                disabled={isCurrentLocationSaved}
+                className="h-8 px-2 text-xs font-[var(--notebook-font)]"
+                title={isCurrentLocationSaved ? t("locationPicker.saved") : t("locationPicker.saveFavorite")}
+              >
+                <Star
+                  className={cn(
+                    "w-3.5 h-3.5",
+                    isCurrentLocationSaved && "fill-[oklch(0.65_0.12_50)] text-[oklch(0.65_0.12_50)]",
+                  )}
+                />
+                <span className="hidden sm:inline ml-1">
+                  {isCurrentLocationSaved ? t("locationPicker.saved") : t("locationPicker.save")}
+                </span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                type="button"
                 onClick={() => setIsEditing(true)}
                 className="h-8 text-xs font-[var(--notebook-font)]"
               >
@@ -628,8 +666,57 @@ function LocationPicker({
               </Button>
             </div>
           </div>
+          {savedLocations.length > 0 && (
+            <div className="mt-3 border-t border-dashed border-border pt-3">
+              <div className="notebook-label mb-2 flex items-center gap-2">
+                <Star className="w-3.5 h-3.5" />
+                {t("locationPicker.savedLocations")}
+              </div>
+              <div className="space-y-1.5">
+                {savedLocations.map((saved) => {
+                  const selected =
+                    Math.abs(saved.lat - location.lat) < 0.00001 &&
+                    Math.abs(saved.lng - location.lng) < 0.00001;
+                  return (
+                    <div
+                      key={saved.id}
+                      className={cn(
+                        "flex items-center gap-2 rounded-sm border border-border px-2 py-1.5",
+                        selected && "bg-[oklch(0.65_0.12_50_/_0.08)]",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onSelectSaved(saved)}
+                        className="min-w-0 flex-1 text-left font-[var(--notebook-font)]"
+                      >
+                        <div className="truncate text-sm font-medium">
+                          {saved.name || `${saved.lat.toFixed(2)}°, ${saved.lng.toFixed(2)}°`}
+                        </div>
+                        <div className="notebook-note truncate">
+                          {t("locationPicker.coordsFormat", {
+                            lat: saved.lat.toFixed(4),
+                            lng: saved.lng.toFixed(4),
+                          })}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteSaved(saved.id)}
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-destructive"
+                        title={t("locationPicker.removeSaved")}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {onClearSaved && (
             <button
+              type="button"
               onClick={onClearSaved}
               className="text-xs text-muted-foreground hover:text-destructive transition-colors mt-1 font-[var(--notebook-font)]"
             >
@@ -803,6 +890,9 @@ export default function Landing() {
   const { t, tHtml, lang, setLang } = useTranslation();
   const dateLocale = t("app.dateFormat");
   const [location, setLocation] = useState<LocationInfo | null>(null);
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() =>
+    loadSavedLocations(),
+  );
   const [appState, setAppState] = useState<AppState>("loading");
   const [times, setTimes] = useState<GayatriTimes | null>(null);
   const [panchang, setPanchang] = useState<Panchang | null>(null);
@@ -1222,6 +1312,29 @@ export default function Landing() {
     setAppState("ready");
   };
 
+  const handleSaveCurrentLocation = () => {
+    if (!location) return;
+    setSavedLocations((prev) => {
+      const next = addSavedLocation(prev, location);
+      saveSavedLocations(next);
+      return next;
+    });
+  };
+
+  const handleSelectSavedLocation = (loc: SavedLocation) => {
+    setLocation({ lat: loc.lat, lng: loc.lng, name: loc.name });
+    saveLocation({ lat: loc.lat, lng: loc.lng, name: loc.name });
+    setAppState("ready");
+  };
+
+  const handleDeleteSavedLocation = (id: string) => {
+    setSavedLocations((prev) => {
+      const next = removeSavedLocation(prev, id);
+      saveSavedLocations(next);
+      return next;
+    });
+  };
+
   const handleClearSavedLocation = () => {
     clearLocation();
     setLocation(null);
@@ -1424,7 +1537,12 @@ export default function Landing() {
                 >
                   <LocationPicker
                     location={location}
+                    savedLocations={savedLocations}
+                    isCurrentLocationSaved={isLocationSaved(savedLocations, location)}
                     onLocationChange={handleLocationChange}
+                    onSaveCurrent={handleSaveCurrentLocation}
+                    onSelectSaved={handleSelectSavedLocation}
+                    onDeleteSaved={handleDeleteSavedLocation}
                     onClearSaved={handleClearSavedLocation}
                   />
                 </motion.div>
