@@ -211,7 +211,7 @@ const en: TranslationMap = {
   "settings.aboutTech":
     "The app uses the {strongStart}suncalc{strongEnd} library for accurate sunrise/sunset and {strongStart}@fusionstrings/panchangam{strongEnd} (Swiss Ephemeris via Wasm) for Hindu calendar calculations.",
   "settings.aboutVersion":
-    "Version 1.0 · Notebook Edition · Built with React + Convex + shadcn/ui",
+    "Version 1.2 · Notebook Edition · Built with React + Convex + shadcn/ui",
 
   // ── Notifications ─────────────────────────────────────────────────
   "notification.title": "Gayatri Muhurta",
@@ -432,7 +432,7 @@ const ru: TranslationMap = {
   "settings.aboutTech":
     "Приложение использует библиотеку {strongStart}suncalc{strongEnd} для точного восхода/заката и {strongStart}@fusionstrings/panchangam{strongEnd} (Швейцарский эфемерид через Wasm) для расчётов индуистского календаря.",
   "settings.aboutVersion":
-    "Версия 1.0 · Notebook Edition · Создано с React + Convex + shadcn/ui",
+    "Версия 1.2 · Notebook Edition · Создано с React + Convex + shadcn/ui",
 
   // ── Notifications ─────────────────────────────────────────────────
   "notification.title": "Гаятри Мухурта",

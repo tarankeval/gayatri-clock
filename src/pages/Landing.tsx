@@ -1267,6 +1267,53 @@ export default function Landing() {
     }
   }, [times?.isGayatriTime]);
 
+  // ── Android Home Screen Widget Snapshot ─────────────────────────
+
+  useEffect(() => {
+    if (!times || !location) return;
+
+    const saveWidgetSnapshot = async () => {
+      try {
+        const { Preferences } = await import("@capacitor/preferences");
+        const nextLabel =
+          times.nextEvent === "gayatri"
+            ? t("timeBlocks.gayatriShort")
+            : times.nextEvent === "brahma"
+              ? t("timeBlocks.brahma")
+              : times.nextEvent === "sunrise"
+                ? t("timeBlocks.sunrise")
+                : t("timeline.title");
+        const activeLabel = times.isGayatriTime
+          ? t("countdown.gayatriActive")
+          : times.isBrahmaMuhurta
+            ? t("timeBlocks.brahma")
+            : nextLabel;
+
+        await Preferences.set({
+          key: "gayatri-time-widget",
+          value: JSON.stringify({
+            title: activeLabel,
+            nextLabel,
+            nextTime: times.nextEventTime
+              ? formatTime(times.nextEventTime, dateLocale)
+              : "—",
+            location:
+              location.name ||
+              `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`,
+            updatedAt: new Date().toLocaleTimeString(dateLocale, {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          }),
+        });
+      } catch {
+        // Widget sync is best-effort and should never block the app.
+      }
+    };
+
+    saveWidgetSnapshot();
+  }, [times, location, dateLocale, t]);
+
   // Re-acquire wake lock if it gets released (e.g. after full-screen video)
   useEffect(() => {
     const handleVisibility = () => {

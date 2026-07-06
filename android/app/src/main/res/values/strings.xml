@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Gayatri Clock</string>
     <string name="title_activity_main">Gayatri Clock</string>
+    <string name="widget_description">Shows the next Gayatri Time window.</string>
     <string name="package_name">com.gayatri.clock</string>
     <string name="custom_url_scheme">com.gayatri.clock</string>
 </resources>
