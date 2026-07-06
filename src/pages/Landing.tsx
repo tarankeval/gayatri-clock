@@ -18,6 +18,7 @@ import {
   Sparkles,
   AlertTriangle,
   Download,
+  Upload,
   Search,
   Settings,
   Share2,
@@ -27,7 +28,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,8 @@ import {
   addSavedLocation,
   removeSavedLocation,
   isLocationSaved,
+  createSettingsBackup,
+  parseSettingsBackup,
   saveTheme,
   loadTheme,
   saveAudioAlarmEnabled,
@@ -137,29 +140,29 @@ function TimeBlock({
 
 function TimelineBar({ times }: { times: GayatriTimes }) {
   const { t } = useTranslation();
-  const totalDuration =
-    times.sunrise.getTime() -
-    times.brahmaMuhurtaStart.getTime() +
-    90 * 60 * 1000; // extra padding
+  const trackStart = new Date(times.brahmaMuhurtaStart.getTime() - 30 * 60 * 1000);
+  const trackEnd = new Date(times.gayatriMuhurtaEnd.getTime() + 30 * 60 * 1000);
+  const totalDuration = trackEnd.getTime() - trackStart.getTime();
+
+  const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
 
   const getPercent = (start: Date, end: Date) => {
-    const startMs = times.brahmaMuhurtaStart.getTime() - 30 * 60 * 1000; // 30 min before brahma
-    const total = totalDuration;
-    const s = ((start.getTime() - startMs) / total) * 100;
-    const e = ((end.getTime() - startMs) / total) * 100;
-    return { left: `${Math.max(0, s)}%`, width: `${Math.min(100, e - s)}%` };
+    const s = clampPercent(
+      ((start.getTime() - trackStart.getTime()) / totalDuration) * 100,
+    );
+    const e = clampPercent(
+      ((end.getTime() - trackStart.getTime()) / totalDuration) * 100,
+    );
+    return { left: `${s}%`, width: `${Math.max(0, e - s)}%` };
   };
 
   const nowPos = (() => {
-    const startMs = times.brahmaMuhurtaStart.getTime() - 30 * 60 * 1000;
-    const total = totalDuration;
-    return ((times.now.getTime() - startMs) / total) * 100;
+    return clampPercent(
+      ((times.now.getTime() - trackStart.getTime()) / totalDuration) * 100,
+    );
   })();
 
-  const beforeDawn = getPercent(
-    new Date(times.brahmaMuhurtaStart.getTime() - 30 * 60 * 1000),
-    times.brahmaMuhurtaStart,
-  );
+  const beforeDawn = getPercent(trackStart, times.brahmaMuhurtaStart);
   const brahma = getPercent(times.brahmaMuhurtaStart, times.gayatriMuhurtaStart);
   const gayatri = getPercent(
     times.gayatriMuhurtaStart,
@@ -207,14 +210,16 @@ function TimelineBar({ times }: { times: GayatriTimes }) {
             "absolute top-0 w-2.5 h-full -ml-1 transition-all duration-1000",
             times.isGayatriTime
               ? "bg-[oklch(0.65_0.15_50)]"
-              : "bg-foreground/50",
+              : times.isBrahmaMuhurta
+                ? "bg-[oklch(0.6_0.12_50)]"
+                : "bg-foreground/50",
           )}
-          style={{ left: `${Math.min(100, Math.max(0, nowPos))}%` }}
+          style={{ left: `${nowPos}%` }}
         >
           <div
             className={cn(
               "absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] whitespace-nowrap font-semibold",
-              times.isGayatriTime
+              times.isGayatriTime || times.isBrahmaMuhurta
                 ? "text-[oklch(0.55_0.15_50)]"
                 : "text-muted-foreground",
             )}
@@ -912,6 +917,7 @@ export default function Landing() {
   const [theme, setTheme] = useState<ThemeMode>(() => loadTheme());
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const wakeLockRef = useRef(false);
+  const settingsImportRef = useRef<HTMLInputElement>(null);
 
   // ── Theme management ────────────────────────────────────────────
 
@@ -1302,6 +1308,55 @@ export default function Landing() {
     const days = await calcGayatriTimesForRange(location.lat, location.lng, 30, dateLocale);
     const ics = generateCalendarICS(days, location.name || "My Location");
     downloadFile(ics, "gayatri-times.ics", "text/calendar;charset=utf-8");
+  };
+
+  const handleExportSettings = () => {
+    const backup = createSettingsBackup({
+      location,
+      savedLocations,
+      theme,
+      audioAlarmEnabled,
+      notificationsEnabled,
+      language: lang,
+    });
+    downloadFile(
+      JSON.stringify(backup, null, 2),
+      "gayatri-time-settings.json",
+      "application/json;charset=utf-8",
+    );
+  };
+
+  const handleImportSettings = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const text = await file.text();
+    const backup = parseSettingsBackup(text);
+    if (!backup) return;
+
+    setLang(backup.language);
+    setTheme(backup.theme);
+    setAudioAlarmEnabled(backup.audioAlarmEnabled);
+    saveAudioAlarmEnabled(backup.audioAlarmEnabled);
+    setSavedLocations(backup.savedLocations);
+    saveSavedLocations(backup.savedLocations);
+
+    if (backup.location) {
+      setLocation(backup.location);
+      saveLocation(backup.location);
+      setAppState("ready");
+    } else {
+      clearLocation();
+      setLocation(null);
+      setAppState("location-prompt");
+    }
+
+    setNotificationsEnabled(
+      backup.notificationsEnabled && notificationPermission === "granted",
+    );
   };
 
   // ── Location change handler ────────────────────────────────────
@@ -1885,6 +1940,39 @@ export default function Landing() {
                       </div>
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleExportSettings}
+                    className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)] mt-2"
+                  >
+                    <div className="flex items-center gap-2 font-medium">
+                      <Download className="h-3.5 w-3.5" />
+                      {t("settings.exportSettings")}
+                    </div>
+                    <div className="notebook-note">
+                      {t("settings.exportSettingsDesc")}
+                    </div>
+                  </button>
+                  <input
+                    ref={settingsImportRef}
+                    type="file"
+                    accept="application/json,.json"
+                    className="hidden"
+                    onChange={handleImportSettings}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => settingsImportRef.current?.click()}
+                    className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)] mt-2"
+                  >
+                    <div className="flex items-center gap-2 font-medium">
+                      <Upload className="h-3.5 w-3.5" />
+                      {t("settings.importSettings")}
+                    </div>
+                    <div className="notebook-note">
+                      {t("settings.importSettingsDesc")}
+                    </div>
+                  </button>
                 </div>
 
                 <Separator />

@@ -198,6 +198,12 @@ const en: TranslationMap = {
   "settings.shareText": "Share as Text",
   "settings.shareTextDesc":
     "Copy today's times to clipboard or share via system share",
+  "settings.exportSettings": "Export Settings",
+  "settings.exportSettingsDesc":
+    "Back up language, theme, sound, notifications, and saved locations",
+  "settings.importSettings": "Import Settings",
+  "settings.importSettingsDesc":
+    "Restore settings from a Gayatri Time JSON backup",
   "settings.currentLocation": "Current Location",
   "settings.about": "About",
   "settings.aboutDesc":
@@ -413,6 +419,12 @@ const ru: TranslationMap = {
   "settings.shareText": "Поделиться текстом",
   "settings.shareTextDesc":
     "Скопировать сегодняшнее время в буфер обмена или поделиться",
+  "settings.exportSettings": "Экспорт настроек",
+  "settings.exportSettingsDesc":
+    "Сохранить язык, тему, звук, уведомления и сохранённые места",
+  "settings.importSettings": "Импорт настроек",
+  "settings.importSettingsDesc":
+    "Восстановить настройки из JSON-копии Gayatri Time",
   "settings.currentLocation": "Текущее местоположение",
   "settings.about": "О приложении",
   "settings.aboutDesc":

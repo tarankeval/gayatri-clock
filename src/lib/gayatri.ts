@@ -27,6 +27,17 @@ export interface SavedLocation extends LocationInfo {
   savedAt: string;
 }
 
+export interface SettingsBackup {
+  version: 1;
+  exportedAt: string;
+  location: LocationInfo | null;
+  savedLocations: SavedLocation[];
+  theme: ThemeMode;
+  audioAlarmEnabled: boolean;
+  notificationsEnabled: boolean;
+  language: "en" | "ru";
+}
+
 export interface GayatriTimes {
   /** Current timestamp */
   now: Date;
@@ -406,7 +417,7 @@ export function calcGayatriTimes(lat: number, lng: number): GayatriTimes {
 
   return {
     now,
-    sunrise: currentSunrise,
+    sunrise,
     sunset,
     tomorrowSunrise: nextSunrise,
     muhurtaLengthMinutes,
@@ -807,6 +818,72 @@ export function isLocationSaved(
   if (!loc) return false;
   const id = getLocationId(loc);
   return locations.some((item) => item.id === id);
+}
+
+/**
+ * Build a portable JSON settings backup.
+ */
+export function createSettingsBackup(input: {
+  location: LocationInfo | null;
+  savedLocations: SavedLocation[];
+  theme: ThemeMode;
+  audioAlarmEnabled: boolean;
+  notificationsEnabled: boolean;
+  language: "en" | "ru";
+}): SettingsBackup {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    location: input.location,
+    savedLocations: input.savedLocations,
+    theme: input.theme,
+    audioAlarmEnabled: input.audioAlarmEnabled,
+    notificationsEnabled: input.notificationsEnabled,
+    language: input.language,
+  };
+}
+
+/**
+ * Validate a settings backup before importing it.
+ */
+export function parseSettingsBackup(raw: string): SettingsBackup | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<SettingsBackup>;
+    if (parsed.version !== 1) return null;
+    if (parsed.theme !== "light" && parsed.theme !== "sepia" && parsed.theme !== "dark") {
+      return null;
+    }
+    if (parsed.language !== "en" && parsed.language !== "ru") return null;
+    if (typeof parsed.audioAlarmEnabled !== "boolean") return null;
+    if (typeof parsed.notificationsEnabled !== "boolean") return null;
+    if (parsed.location !== null && !isValidLocation(parsed.location)) return null;
+    if (!Array.isArray(parsed.savedLocations)) return null;
+
+    const savedLocations = parsed.savedLocations.filter((item): item is SavedLocation => {
+      const candidate = item as Partial<SavedLocation>;
+      return (
+        isValidLocation(item) &&
+        typeof candidate.id === "string" &&
+        typeof candidate.savedAt === "string"
+      );
+    });
+
+    return {
+      version: 1,
+      exportedAt:
+        typeof parsed.exportedAt === "string"
+          ? parsed.exportedAt
+          : new Date().toISOString(),
+      location: parsed.location ?? null,
+      savedLocations,
+      theme: parsed.theme,
+      audioAlarmEnabled: parsed.audioAlarmEnabled,
+      notificationsEnabled: parsed.notificationsEnabled,
+      language: parsed.language,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ─── Location ──────────────────────────────────────────────────────────
