@@ -888,10 +888,50 @@ export function parseSettingsBackup(raw: string): SettingsBackup | null {
 
 // ─── Location ──────────────────────────────────────────────────────────
 
+type BasicGeolocationPosition = {
+  coords: {
+    latitude: number;
+    longitude: number;
+  };
+};
+
 /**
- * Get the user's current location using the Geolocation API.
+ * Get the user's current location. Android APKs use the native Capacitor
+ * geolocation plugin so the system permission prompt is shown reliably.
  */
-export function getCurrentLocation(): Promise<GeolocationPosition> {
+export async function getCurrentLocation(): Promise<BasicGeolocationPosition> {
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (Capacitor.isNativePlatform()) {
+      const { Geolocation } = await import("@capacitor/geolocation");
+      const permission = await Geolocation.requestPermissions({
+        permissions: ["location"],
+      });
+
+      if (
+        permission.location !== "granted" &&
+        permission.coarseLocation !== "granted"
+      ) {
+        throw new Error("Location permission was not granted.");
+      }
+
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: permission.location === "granted",
+        timeout: 15000,
+        maximumAge: 300000,
+      });
+
+      return {
+        coords: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        },
+      };
+    }
+  } catch {
+    // Fall through to browser geolocation for web builds.
+  }
+
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error("Geolocation is not supported by this browser."));
@@ -899,7 +939,7 @@ export function getCurrentLocation(): Promise<GeolocationPosition> {
     }
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy: true,
-      timeout: 10000,
+      timeout: 15000,
       maximumAge: 300000,
     });
   });
