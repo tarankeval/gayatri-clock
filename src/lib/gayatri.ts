@@ -624,6 +624,7 @@ export function calcPanchang(date: Date, lat: number, lng: number): Panchang {
 // ─── Theme Persistence ──────────────────────────────────────────────────
 
 const THEME_STORAGE_KEY = "gayatri-time-theme";
+const AUDIO_ALARM_STORAGE_KEY = "gayatri-time-audio-alarm";
 
 export type ThemeMode = "light" | "sepia" | "dark";
 
@@ -649,6 +650,28 @@ export function loadTheme(): ThemeMode {
     // ignore
   }
   return "light";
+}
+
+/**
+ * Save whether the audio alarm should play when Gayatri time starts.
+ */
+export function saveAudioAlarmEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(AUDIO_ALARM_STORAGE_KEY, enabled ? "true" : "false");
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Load the saved audio alarm preference.
+ */
+export function loadAudioAlarmEnabled(): boolean {
+  try {
+    return localStorage.getItem(AUDIO_ALARM_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
 }
 
 // ─── Location Persistence ──────────────────────────────────────────────
@@ -1146,6 +1169,21 @@ export function downloadFile(content: string, filename: string, mimeType: string
  * Share text using the Web Share API (mobile-friendly). Falls back to clipboard.
  */
 export async function shareOrCopy(text: string, title?: string): Promise<void> {
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (Capacitor.isNativePlatform()) {
+      const { Share } = await import("@capacitor/share");
+      await Share.share({
+        title: title || "Gayatri Time",
+        text,
+        dialogTitle: title || "Gayatri Time",
+      });
+      return;
+    }
+  } catch {
+    // Capacitor Share unavailable; use web fallbacks below.
+  }
+
   if (navigator.share) {
     try {
       await navigator.share({ title: title || "Gayatri Time", text });
@@ -1157,8 +1195,22 @@ export async function shareOrCopy(text: string, title?: string): Promise<void> {
   // Fallback: copy to clipboard
   try {
     await navigator.clipboard.writeText(text);
+    return;
   } catch {
-    // Clipboard unavailable — silently fail
+    // Clipboard API unavailable; try the older selection-based copy path.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
   }
 }
 

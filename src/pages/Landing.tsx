@@ -23,19 +23,13 @@ import {
   Share2,
   SunMoon,
   Info,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -59,6 +53,8 @@ import {
   clearLocation,
   saveTheme,
   loadTheme,
+  saveAudioAlarmEnabled,
+  loadAudioAlarmEnabled,
   playGayatriChime,
   playTestChime,
   generateShareText,
@@ -374,6 +370,7 @@ function CountdownDisplay({
 
       <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-dashed border-border flex-wrap">
         <button
+          type="button"
           onClick={onToggleNotifications}
           className={cn(
             "flex items-center gap-2 text-sm transition-colors",
@@ -395,6 +392,7 @@ function CountdownDisplay({
         <span className="w-px h-4 bg-border" />
 
         <button
+          type="button"
           onClick={onToggleAudio}
           className={cn(
             "flex items-center gap-2 text-sm transition-colors",
@@ -415,6 +413,7 @@ function CountdownDisplay({
 
         {audioAlarmEnabled && (
           <button
+            type="button"
             onClick={onTestAlarm}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -808,7 +807,12 @@ export default function Landing() {
   const [times, setTimes] = useState<GayatriTimes | null>(null);
   const [panchang, setPanchang] = useState<Panchang | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [audioAlarmEnabled, setAudioAlarmEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<
+    "prompt" | "granted" | "denied" | "unsupported"
+  >("prompt");
+  const [audioAlarmEnabled, setAudioAlarmEnabled] = useState(() =>
+    loadAudioAlarmEnabled(),
+  );
   const [errorMessage, setErrorMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const notificationSentRef = useRef(false);
@@ -849,6 +853,23 @@ export default function Landing() {
   // ── Settings Sheet ────────────────────────────────────────────
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSettingsOpen(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [settingsOpen]);
 
   // ── PWA Install Prompt ─────────────────────────────────────────
 
@@ -987,10 +1008,69 @@ export default function Landing() {
 
   // ── Notifications ───────────────────────────────────────────────
 
+  useEffect(() => {
+    const detectNotificationPermission = async () => {
+      try {
+        const { Capacitor } = await import("@capacitor/core");
+        if (Capacitor.isNativePlatform()) {
+          const { LocalNotifications } = await import(
+            "@capacitor/local-notifications"
+          );
+          const status = await LocalNotifications.checkPermissions();
+          setNotificationPermission(
+            status.display === "granted" ? "granted" : "prompt",
+          );
+          setNotificationsEnabled(status.display === "granted");
+          return;
+        }
+      } catch {
+        // Fall through to the browser permission check.
+      }
+
+      if (!("Notification" in window)) {
+        setNotificationPermission("unsupported");
+        return;
+      }
+      setNotificationPermission(
+        Notification.permission === "default" ? "prompt" : Notification.permission,
+      );
+      setNotificationsEnabled(Notification.permission === "granted");
+    };
+
+    detectNotificationPermission();
+  }, []);
+
   const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) return false;
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      if (Capacitor.isNativePlatform()) {
+        const { LocalNotifications } = await import(
+          "@capacitor/local-notifications"
+        );
+        const status = await LocalNotifications.requestPermissions();
+        const granted = status.display === "granted";
+        setNotificationPermission(granted ? "granted" : "denied");
+        if (granted) {
+          await LocalNotifications.createChannel({
+            id: "gayatri-muhurta",
+            name: "Gayatri Muhurta",
+            description: "Gayatri Muhurta reminders",
+            importance: 4,
+          });
+        }
+        return granted;
+      }
+    } catch {
+      // Fall through to the browser permission request.
+    }
+
+    if (!("Notification" in window)) {
+      setNotificationPermission("unsupported");
+      return false;
+    }
     if (Notification.permission === "granted") return true;
     const result = await Notification.requestPermission();
+    setNotificationPermission(result === "default" ? "prompt" : result);
     return result === "granted";
   };
 
@@ -1005,7 +1085,11 @@ export default function Landing() {
   };
 
   const toggleAudioAlarm = () => {
-    setAudioAlarmEnabled((prev) => !prev);
+    setAudioAlarmEnabled((prev) => {
+      const next = !prev;
+      saveAudioAlarmEnabled(next);
+      return next;
+    });
     audioAlarmSentRef.current = false;
   };
 
@@ -1015,19 +1099,49 @@ export default function Landing() {
 
   // Send notification when Gayatri time starts
   useEffect(() => {
-    if (
-      notificationsEnabled &&
-      times?.isGayatriTime &&
-      !notificationSentRef.current
-    ) {
-      notificationSentRef.current = true;
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Gayatri Muhurta", {
-          body: "The sacred Gayatri time has begun. Three conditions align for spiritual practice.",
-          icon: "/favicon.ico",
-        });
+    const sendNotification = async () => {
+      if (
+        notificationsEnabled &&
+        times?.isGayatriTime &&
+        !notificationSentRef.current
+      ) {
+        notificationSentRef.current = true;
+        const title = "Gayatri Muhurta";
+        const body =
+          "The sacred Gayatri time has begun. Three conditions align for spiritual practice.";
+        try {
+          const { Capacitor } = await import("@capacitor/core");
+          if (Capacitor.isNativePlatform()) {
+            const { LocalNotifications } = await import(
+              "@capacitor/local-notifications"
+            );
+            await LocalNotifications.schedule({
+              notifications: [
+                {
+                  id: Date.now() % 2147483647,
+                  title,
+                  body,
+                  channelId: "gayatri-muhurta",
+                },
+              ],
+            });
+            return;
+          }
+        } catch {
+          // Fall through to browser notification.
+        }
+
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification(title, {
+            body,
+            icon: "/favicon.ico",
+          });
+        }
       }
-    }
+    };
+
+    sendNotification();
+
     if (!times?.isGayatriTime) {
       notificationSentRef.current = false;
     }
@@ -1164,6 +1278,7 @@ export default function Landing() {
               <div className="flex items-center gap-1">
                 {installPromptAvailable && (
                   <button
+                    type="button"
                     onClick={handleInstall}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
                     title={t("app.install")}
@@ -1173,6 +1288,7 @@ export default function Landing() {
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => setLang(lang === "en" ? "ru" : "en")}
                   className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors text-xs font-semibold"
                   title={lang === "en" ? "Русский" : "English"}
@@ -1180,14 +1296,17 @@ export default function Landing() {
                   {lang === "en" ? "RU" : "EN"}
                 </button>
                 <button
+                  type="button"
                   onClick={handleShare}
                   className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
                   title={t("app.shareTitle")}
                   disabled={appState !== "ready"}
+                  aria-disabled={appState !== "ready"}
                 >
                   <Share2 className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={cycleTheme}
                   className="flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
                   title={`${t("app.switchTheme")} (${t(`theme.${theme}`)})`}
@@ -1197,6 +1316,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   variant="ghost"
+                  type="button"
                   onClick={() => setSettingsOpen(true)}
                   className="h-8 w-8 p-0"
                 >
@@ -1205,6 +1325,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   variant="ghost"
+                  type="button"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   className="h-8 w-8 p-0"
@@ -1446,15 +1567,38 @@ export default function Landing() {
             </motion.div>
           )}
 
-          {/* ── Settings Sheet ── */}
-          <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <SheetContent side="right" className="notebook-paper">
-              <SheetHeader className="notebook-header !pb-3 !mb-0">
-                <SheetTitle className="notebook-title !text-xl flex items-center gap-2">
+          {/* ── Settings Modal ── */}
+          {settingsOpen && (
+            <div
+              className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/50 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))]"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="settings-title"
+            >
+              <button
+                type="button"
+                className="absolute inset-0 h-full w-full cursor-default"
+                aria-label="Close settings"
+                onClick={() => setSettingsOpen(false)}
+              />
+              <div className="notebook-paper relative z-[10000] flex max-h-[calc(100svh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-24px)] w-full max-w-lg flex-col overflow-hidden rounded-t-lg border border-border shadow-2xl">
+                <div className="notebook-header !mb-0 !pb-3 pr-12">
+                  <h2
+                    id="settings-title"
+                    className="notebook-title !text-xl flex items-center gap-2"
+                  >
                   <Settings className="w-5 h-5" />
                   {t("settings.title")}
-                </SheetTitle>
-              </SheetHeader>
+                  </h2>
+                  <button
+                    type="button"
+                    className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    onClick={() => setSettingsOpen(false)}
+                    aria-label="Close settings"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
               <div className="flex-1 overflow-y-auto px-4 space-y-5 pb-6 font-[var(--notebook-font)]">
                 {/* ── Language ── */}
@@ -1466,6 +1610,7 @@ export default function Landing() {
                   <div className="flex gap-2">
                     {(["en", "ru"] as const).map((l) => (
                       <button
+                        type="button"
                         key={l}
                         onClick={() => setLang(l)}
                         className={cn(
@@ -1492,6 +1637,7 @@ export default function Landing() {
                   <div className="flex gap-2">
                     {(["light", "sepia", "dark"] as ThemeMode[]).map((mode) => (
                       <button
+                        type="button"
                         key={mode}
                         onClick={() => setTheme(mode)}
                         className={cn(
@@ -1526,7 +1672,13 @@ export default function Landing() {
                     />
                   </div>
                   <div className="notebook-note mt-1">
-                    {t("settings.notifyDesc")}
+                    {notificationPermission === "denied"
+                      ? "Notifications are blocked in Android settings."
+                      : notificationPermission === "unsupported"
+                        ? "Notifications are not supported in this WebView."
+                        : notificationPermission === "granted"
+                          ? "Notifications are allowed."
+                          : t("settings.notifyDesc")}
                   </div>
                 </div>
 
@@ -1552,6 +1704,7 @@ export default function Landing() {
                   </div>
                   {audioAlarmEnabled && (
                     <button
+                      type="button"
                       onClick={handleTestAlarm}
                       className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--notebook-font)]"
                     >
@@ -1598,6 +1751,7 @@ export default function Landing() {
                     {t("settings.export")}
                   </div>
                   <button
+                    type="button"
                     onClick={handleExportICS}
                     className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)]"
                   >
@@ -1608,6 +1762,7 @@ export default function Landing() {
                   </button>
                   {times && location && (
                     <button
+                      type="button"
                       onClick={handleShare}
                       className="w-full text-left text-sm py-2 px-3 rounded-sm border border-border hover:bg-muted/50 transition-colors font-[var(--notebook-font)] mt-2"
                     >
@@ -1636,6 +1791,7 @@ export default function Landing() {
                     </div>
                   )}
                   <button
+                    type="button"
                     onClick={handleClearSavedLocation}
                     className="text-xs text-muted-foreground hover:text-destructive transition-colors mt-2 font-[var(--notebook-font)]"
                   >
@@ -1664,8 +1820,9 @@ export default function Landing() {
                   </div>
                 </div>
               </div>
-            </SheetContent>
-          </Sheet>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

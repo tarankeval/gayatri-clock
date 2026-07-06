@@ -1,11 +1,13 @@
 import '@vly-ai/integrations';
+import { ConvexConfigMissing } from "@/components/ConvexConfigMissing";
 import { Toaster } from "@/components/ui/sonner";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { InstrumentationProvider } from "@/instrumentation.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
+import { getConvexUrl } from "@/lib/convex-config";
 import { LanguageProvider } from "@/lib/i18n";
-import { StrictMode, useEffect, lazy, Suspense } from "react";
+import { StrictMode, useEffect, lazy, Suspense, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
@@ -25,7 +27,8 @@ function RouteLoading() {
   );
 }
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl = getConvexUrl();
+const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 
 
 
@@ -52,25 +55,45 @@ function RouteSyncer() {
   return null;
 }
 
+function AppProviders({ children }: { children: ReactNode }) {
+  if (!convex) {
+    console.error(
+      "Missing VITE_CONVEX_URL. Convex auth is disabled for this build.",
+    );
+    return <>{children}</>;
+  }
+
+  return <ConvexAuthProvider client={convex}>{children}</ConvexAuthProvider>;
+}
+
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <VlyToolbar />
     <InstrumentationProvider>
       <LanguageProvider>
-      <ConvexAuthProvider client={convex}>
+      <AppProviders>
         <BrowserRouter>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<AuthPage redirectAfterAuth="/" />} /> {/* TODO: change redirect after auth to correct page */}
+              <Route
+                path="/auth"
+                element={
+                  convex ? (
+                    <AuthPage redirectAfterAuth="/" />
+                  ) : (
+                    <ConvexConfigMissing />
+                  )
+                }
+              /> {/* TODO: change redirect after auth to correct page */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
         <Toaster />
-      </ConvexAuthProvider>
+      </AppProviders>
       </LanguageProvider>
     </InstrumentationProvider>
   </StrictMode>,
